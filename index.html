@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Application</title>
+    <link rel="stylesheet" href="/ChatApp/CSS/indexstyle.css">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Sidebar for Contacts -->
+        <div class="contacts-section">
+            <input type="text" placeholder="Search contacts..." class="search-bar">
+            <div class="contact">
+                <div class="avatar"></div>
+                <div class="contact-info">
+                    <p class="name">Contact Name</p>
+                    <p class="last-message">Last message preview...</p>
+                </div>
+            </div>
+            <!-- Add more contacts similarly -->
+        </div>
+
+        <!-- Chat Section -->
+        <div class="chat-section">
+            <div class="chat-header">
+                <div class="chat-avatar"></div>
+                <div class="chat-info">
+                    <p class="chat-name">Contact Name</p>
+                    <p class="chat-status">Online</p>
+                </div>
+            </div>
+
+            <div class="chat-messages">
+                <div class="message received">Hello!</div>
+                <div class="message sent">Hi there!</div>
+                <div class="message received">How are you?</div>
+                <!-- Add more messages similarly -->
+            </div>
+
+            <div class="chat-input">
+                <input type="text" placeholder="Type a message..." class="message-input">
+                <button class="send-button">Send</button>
+            </div>
+        </div>
+    </div>
+    <script src="/ChatApp/Scripts/script.js"></script>
+</body>
+</html>
