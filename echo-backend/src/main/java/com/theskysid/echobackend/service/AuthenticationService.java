@@ -8,6 +8,8 @@ import com.theskysid.echobackend.jwt.JwtService;
 import com.theskysid.echobackend.model.User;
 import com.theskysid.echobackend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -59,7 +61,16 @@ public class AuthenticationService {
    }
 
    public ResponseEntity<String> logout() {
+      ResponseCookie responseCookie = ResponseCookie.from("JWT", "")
+              .httpOnly(true)
+              .secure(true)
+              .path("/")
+              .maxAge(0)
+              .sameSite("Strict")
+              .build();
 
+      return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, responseCookie.toString())
+              .body("Logged Out Successfully");
    }
 
    public UserDto convertToUserDto(User user) {
