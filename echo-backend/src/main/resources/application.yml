@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:echomessaging
+    driver-class-name: org.h2.Driver
+    username: sr
+    password: password
+
+  jpa:
+    database-platform: org.hibernate.dailect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+
+jwt:
+  secret:
+  expiration:

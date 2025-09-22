@@ -66,9 +66,12 @@ public class AuthController {
 
    public UserDto convertToUserDto(User user) {
       UserDto userDto = new UserDto();
+
       userDto.setId(user.getId());
       userDto.setEmail(user.getEmail());
       userDto.setUsername(user.getUsername());
+
+      return userDto;
    }
 
 }
