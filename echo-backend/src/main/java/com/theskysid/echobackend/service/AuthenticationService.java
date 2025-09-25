@@ -16,6 +16,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 public class AuthenticationService {
 
@@ -71,6 +76,12 @@ public class AuthenticationService {
 
       return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, responseCookie.toString())
               .body("Logged Out Successfully");
+   }
+
+   public Map<String, Object> getOnlineUsers(){
+      List<User> userList = userRepository.findByIsOnlineTrue();
+      Map<String, Object> onlineUsers = userList.stream().collect(Collectors.toMap(User::getUsername, user -> user));
+      return onlineUsers;
    }
 
    public UserDto convertToUserDto(User user) {
