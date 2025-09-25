@@ -167,5 +167,16 @@ export const authService = {
             console.error("Fetch private messages failed:", error);
             throw error;
         }
+    },
+
+    getOnlineUsers: async() => {
+        try {
+            const response = await api.get('/api/online-users');
+            return response.data;
+        } catch (error) {
+            console.error("Fetch online users failed:", error);
+            throw error;
+        }
     }
+
 }
