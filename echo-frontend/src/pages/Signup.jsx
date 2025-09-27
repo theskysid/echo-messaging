@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {authService} from "../services/authService.js";
+import authService from "../services/authService";
+import '../styles/Signup.css';
 
 const Signup = () => {
 
@@ -54,7 +55,7 @@ const Signup = () => {
 
                 {message && (
                     <p className="auth-message" style={{ color: message.includes("successful") ? "green" : "red" }}>
-
+                    {message}
                     </p>
                 )}
             </div>

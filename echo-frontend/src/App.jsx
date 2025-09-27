@@ -1,25 +1,24 @@
 import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import Navbar from './components/Navbar';
 import MainPage from './pages/MainPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import ProtectedRoute from './components/ProtectedRoute';
+import ChatArea from './pages/ChatArea';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 function App(){
     return(
         <Router>
-
             <div className="app">
-                
-                <Navbar>
-
+                <Navbar />
                     <Routes>
-                        <Route poth="/" element= {<MainPage/>} />
-                        <Route poth="/login" element= {<Login/>} />
-                        <Route poth="/signup" element= {<Signup/>} />
-                        <Route poth="/chatarea" element= {
+                        <Route path="/" element= {<MainPage/>} />
+                        <Route path="/login" element= {<Login/>} />
+                        <Route path="/signup" element= {<Signup/>} />
+                        <Route path="/chatarea" element= {
                             <ProtectedRoute>
-                                <Chat />
+                                <ChatArea />
                             </ProtectedRoute>
                         } />
 
@@ -27,9 +26,6 @@ function App(){
                         <Route path="*" element={<Navigate to = "/" replace />}></Route> 
                     
                     </Routes>
-
-                    
-                </Navbar>
 
             </div>
 

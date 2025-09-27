@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService, authService as result } from '../services/authService.js';
+import '../styles/ChatArea.css';
+import { authService as result } from '../services/authService.js';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
-
+import PrivateChat from './PrivateChat.jsx';
 const ChatArea = () => {
 
     const navigate = useNavigate();
@@ -59,12 +60,12 @@ const ChatArea = () => {
             if(!username) return;
 
             setOnlineUsers(prev => {
-                const prevSet = new Set(prev);
+                const newSet = new Set(prev);
                 newSet.add(username);
-                return prevSet;
+                return newSet;
             });
 
-            const socket = new SockJS('https://localhost:8080/ws');
+            const socket = new SockJS('httpss://localhost:8080/ws');
             stompClient.current = Stomp.over(socket);
 
             stompClient.current.connect({
@@ -97,7 +98,7 @@ const ChatArea = () => {
                         return;
                     }
 
-                    setMessage(prev => [...prev, {
+                    setMessages(prev => [...prev, {
                         ...chatMessage,
                         timestamp: chatMessage.timestamp || new Date().toISOString(),
                         id: chatMessage.id || (Date.now() + Math.random())
@@ -105,9 +106,9 @@ const ChatArea = () => {
 
                 });
 
-                const PrivateChat = stompClient.current.subscribe('/user/${username}/queue/user', (msg) => {
+                const PrivateChat = stompClient.current.subscribe(`/user/${username}/queue/user`, (msg) => {
                     const privateMessage = JSON.parse(msg.body);
-                    const otherUser = privateMessage.sender === username ? privateMessage.recepient : privateMessage.sender;
+                    const otherUser = privateMessage.sender === username ? privateMessage.recipient : privateMessage.sender;
 
                     const handler = privateMessageHandlers.current.get(otherUser);
 
@@ -117,9 +118,9 @@ const ChatArea = () => {
                         } catch (error) {
                             console.error("Error in private message handler:", error);
                         }
-                    } else if(privateMessage.recepient === username){
+                    } else if(privateMessage.recipient === username){
                         setUnreadMessages(prev => {
-                            const newUnread = new Map();
+                            const newUnread = new Map(prev);
                             const currentCount = newUnread.get(otherUser) || 0;
                             newUnread.set(otherUser, currentCount + 1);
                             return newUnread;
@@ -133,7 +134,7 @@ const ChatArea = () => {
                     color: userColor
                 }));
                 
-                authService.getOnlineUsers().then(data => {
+                result.getOnlineUsers().then(data => {
                     const fetchedUsers = Object.keys(data);
                     setOnlineUsers(prev => {
                         const mergeSet = new Set(prev);
@@ -169,6 +170,75 @@ const ChatArea = () => {
     }, [username, userColor, registerPrivateMessageHandler, unregisterPrivateMessageHandler]);
 
 
+    //internal implementations of the functions 
+    const openPrivateChat = (otherUser) => {
+        if(otherUser === username) return;
+
+        setPrivateChats(prev => {
+            const newChats = new Map(prev);
+            newChats.set(otherUser, true);
+            return newChats;
+        });
+
+        setUnreadMessages(prev => {
+            const newUnread = new Map(prev);
+            newUnread.delete(otherUser);
+            return newUnread;
+        });
+    }
+
+    const closePrivateChat = (otherUser) => {
+        setPrivateChats(prev => {
+            const newChats = new Map(prev);
+            newChats.delete(otherUser);
+            return newChats;
+        });
+        unregisterPrivateMessageHandler(otherUser);
+    }
+
+    const sendMessage = (e) => {
+        e.preventDefault();
+        if(stompClient.current && stompClient.current.connected && message.trim()){
+            const chatMessage = {
+                sender: username,
+                content: message,
+                type: 'CHAT',
+                color: userColor,
+                // timestamp: new Date().toISOString()
+            };
+
+            stompClient.current.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+            setMessage("");
+            setShowEmojiPicker(false);
+        }
+    }
+
+    const handleTyping = (e) => {
+        setMessage(e.target.value);
+
+        if(stompClient.current && stompClient.current.connected && e.target.value.trim()){
+            stompClient.current.send("/app/chat.sendMessage", {}, JSON.stringify({
+                sender: username,
+                type: 'TYPING'
+            }));
+        }
+    };
+
+    const addEmoji = (emoji) => {
+        setMessage(prev => prev + emoji);
+        setShowEmojiPicker(false);
+    }
+
+    const formatTime = (timestamp) => {
+        return new Date(timestamp).toLocaleTimeString('en-US', {
+            timeZone: 'Asia/Kolkata',
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit'
+        } );
+    };
+    
+
     return (
         <div className="chat-container">
             <div className="sidebar">
@@ -180,8 +250,8 @@ const ChatArea = () => {
                     {Array.from(onlineUsers).map((user) => (
                         <div 
                         key={user} 
-                        className={"user-item ${user === username ? 'current-user' : ''}"}
-                        onclick={() => openPrivateChat(user)}>
+                        className={`user-item ${user === username ? 'current-user' : ''}`}
+                        onClick={() => openPrivateChat(user)}>
 
                             <div className="user-avatar" style={{backgroundColor: user===username ? userColor : `#007bff`}}>
                                 {user.charAt(0).toUpperCase()}
@@ -203,7 +273,7 @@ const ChatArea = () => {
                 
                 <div className="message-container">
                     {messages.map((msg) => (
-                        <div key={msg.id} className={"message ${msg.type.toLowerCase()"}> 
+                        <div key={msg.id} className={`message ${msg.type.toLowerCase()}`}> 
                             {msg.type === 'JOIN' && (
                                 <div className="system-message">
                                     {msg.sender} joined the group.
@@ -220,7 +290,7 @@ const ChatArea = () => {
 
                             {
                                 msg.type === 'CHAT' && (
-                                    <div className={"chat-message ${msg.sender === username ? 'own-message' : ''}"}>
+                                    <div className={`chat-message ${msg.sender === username ? 'own-message' : ''}`}>
                                         <div className="message-info">
                                             <span className='sender' style={{color: msg.color || '#007bff'}}>
                                                 {msg.sender}
@@ -249,13 +319,13 @@ const ChatArea = () => {
                     {showEmojiPicker && (
                         <div className="emoji-picker">
                             {emojis.map((emoji) => (
-                                <button key={emojis} onclick={() => addEmoji(emoji)}>{emoji}</button>
+                                <button key={emoji} onClick={() => addEmoji(emoji)}>{emoji}</button>
                             ))}
                         </div>
                     )}
 
                     <form onSubmit={sendMessage} className='message-form'>
-                        <button type='button' onclick={() => setShowEmojiPicker(!showEmojiPicker)} className='emoji-btn'>
+                        <button type='button' onClick={() => setShowEmojiPicker(!showEmojiPicker)} className='emoji-btn'>
                             😊
                         </button>
 
@@ -269,9 +339,24 @@ const ChatArea = () => {
 
             </div>
 
-            {Array.from}
+            {Array.from(privateChats.keys()).map((otherUser) => (
+                <PrivateChat 
+                    key={otherUser}
+                    currentUser={username}
+                    recipientUser = {otherUser}
+                    userColor = {userColor}
+                    stompClient = {stompClient.current}
+                    onClose = {() => {
+                        closePrivateChat(otherUser);
+                    }}
+                    registerPrivateMessageHandler = {registerPrivateMessageHandler}
+                    unregisterPrivateMessageHandler = {unregisterPrivateMessageHandler}
+                />
+            ))}
 
         </div>
-    )
+    );
 
-}
+};
+
+export default ChatArea;

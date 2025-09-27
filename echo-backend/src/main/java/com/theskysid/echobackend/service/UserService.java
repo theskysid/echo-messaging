@@ -11,7 +11,7 @@ public class UserService {
    UserRepository userRepository;
 
    public boolean userExists(String username) {
-      return userRepository.existbyUsername(username);
+      return userRepository.existsByUsername(username);
    }
 
    public void setUserOnlineStatus(String username, boolean isOnline) {
