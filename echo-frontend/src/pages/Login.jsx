@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {authService} from "../services/authService.js";
+import { authService } from "../services/authService.js";
 import '../styles/Login.css';
 
 const Login = () => {
@@ -18,41 +18,44 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            const result = await authService.Login({username, password});
-            if(result.success) {
+            const result = await authService.login({username, password});
+            if(result && result.success) {
                 setMessage("Login successful");
-                setTimeout(() => {
-                    navigate("/chatarea");
-                }, 2000); //2 seconds delay before redirecting to login
+                setIsLoading(false);
+                // Navigate immediately instead of waiting
+                navigate("/chatarea");
+            } else {
+                setMessage("Login failed. Please try again.");
+                setIsLoading(false);
             }
         } catch (error) {
             setMessage(error.message || "Login failed. Please try again.");
             console.error("Login Error:", error);
+            setIsLoading(false);
         }
-        
     }
 
     return (
-        <div className="Login-container">
-            <div className="Login-box">
-                <div className="Login-header">
+        <div className="login-container">
+            <div className="login-box">
+                <div className="login-header">
                     <h1>Login</h1>
-                    <p>Create an account to start chatting</p>
+                    <p>Please login to start chatting</p>
                 </div>
 
-                <form action="" onSubmit={handleLogin} className="Login-form">
+                <form action="" onSubmit={handleLogin} className="login-form">
                     <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="username-input" maxLength={20} required disabled={isLoading} />
 
                     <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="password-input" maxLength={20} required disabled={isLoading} />
 
                     <button type="submit" disabled={!username.trim() || !password.trim() || isLoading} className="login-btn">
-                        {isLoading ? "Signing up..." : "Sign Up"}
+                        {isLoading ? "Logging in..." : "Login"}
                     </button>
                 </form>
 
                 {message && (
                     <p className="auth-message" style={{ color: message.includes("successful") ? "green" : "red" }}>
-
+                        {message}
                     </p>
                 )}
             </div>

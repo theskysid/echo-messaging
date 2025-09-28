@@ -6,9 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
+@Service
 public class CustomUserDetails implements UserDetailsService {
 
    @Autowired
@@ -16,7 +18,7 @@ public class CustomUserDetails implements UserDetailsService {
 
    @Override
    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-      User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("Username not found"));
+      User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Username not found: " + username));
 
       return org.springframework.security.core.userdetails.User.builder()  //this is the user that spring created
               .username(user.getUsername())

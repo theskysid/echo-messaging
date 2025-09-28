@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/ChatArea.css';
-import { authService as result } from '../services/authService.js';
+import { authService } from '../services/authService.js';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
 import PrivateChat from './PrivateChat.jsx';
 const ChatArea = () => {
 
     const navigate = useNavigate();
-    const currentUser = result.getCurrentUser();
+    const currentUser = authService.getCurrentUser();
+    const token = authService.getToken();
 
     useEffect(() => {
         if (!currentUser) {
@@ -35,12 +36,6 @@ const ChatArea = () => {
         "🔥", "🌟", "💯", "🎶", "🍕", "🍔", "⚽", "🏀", "🚗", "✈️"
     ];
 
-    if (!currentUser) {
-        return null; // or a loading spinner
-    }
-
-    const {username, color: userColor} = currentUser;
-
     const scrollToBottom = () => {
         messageEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -53,11 +48,22 @@ const ChatArea = () => {
         privateMessageHandlers.current.delete(otherUser);
     }, []);
 
+    if (!currentUser) {
+        return null; // or a loading spinner
+    }
+
+    const {username, color: userColor} = currentUser;
+
     useEffect(() => {
+        console.log("🚀 ChatArea useEffect triggered for user:", username);
         let reconnectInterval;
 
         const connectAndFetch = async() => {
-            if(!username) return;
+            if(!username) {
+                console.log("❌ No username found, aborting connection");
+                return;
+            }
+            console.log("🔄 Starting connectAndFetch for user:", username);
 
             setOnlineUsers(prev => {
                 const newSet = new Set(prev);
@@ -65,26 +71,37 @@ const ChatArea = () => {
                 return newSet;
             });
 
-            const socket = new SockJS('httpss://localhost:8080/ws');
+            console.log("🔌 Attempting to connect to WebSocket...");
+            const socket = new SockJS('http://localhost:8080/ws');
             stompClient.current = Stomp.over(socket);
 
-            stompClient.current.connect({
+            // Include JWT token in connection headers
+            const headers = {
+                'Authorization': `Bearer ${token}`,
                 'client-id': username,
                 'session-id': Date.now().toString(),
                 'username': username
-            }, (frame) => {
+            };
+            console.log("🔑 Connection headers:", headers);
+
+            stompClient.current.connect(headers, () => {
+                console.log("✅ WebSocket connected successfully for user:", username);
                 clearInterval(reconnectInterval);
                 
                 const GroupChat = stompClient.current.subscribe('/topic/public', (msg) => {
                     const chatMessage = JSON.parse(msg.body);
+                    console.log("📨 Received public message:", chatMessage);
 
                     setOnlineUsers(prev => {
                        const newUsers = new Set(prev);
                        if(chatMessage.type === 'JOIN'){
+                            console.log("User joined:", chatMessage.sender);
                             newUsers.add(chatMessage.sender);
                        } else if(chatMessage.type === 'LEAVE'){
+                            console.log("User left:", chatMessage.sender);
                             newUsers.delete(chatMessage.sender);
                        }
+                       console.log("Online users after JOIN/LEAVE:", Array.from(newUsers));
                        return newUsers;         
 
                     });
@@ -128,24 +145,42 @@ const ChatArea = () => {
                     }
                 });           
                 
-                stompClient.current.send("/app/chat.addUser", {}, JSON.stringify({
+                const joinMessage = {
                     username: username, 
                     type: 'JOIN',
                     color: userColor
-                }));
+                };
                 
-                result.getOnlineUsers().then(data => {
-                    const fetchedUsers = Object.keys(data);
-                    setOnlineUsers(prev => {
-                        const mergeSet = new Set(prev);
-                        fetchedUsers.forEach(user => mergeSet.add(user));
-                        mergeSet.add(username);
-                        return mergeSet;
-                    });
-                })
+                console.log("🚀 Sending JOIN message:", joinMessage);
+                stompClient.current.send("/app/chat.addUser", {}, JSON.stringify(joinMessage));
+                console.log("✅ JOIN message sent for user:", username);
+                
+                // Fetch online users after a brief delay to allow server processing
+                setTimeout(() => {
+                    console.log("🔄 Fetching online users from API...");
+                    console.log("🔑 Current user token:", token ? `${token.substring(0, 20)}...` : 'null');
+                    authService.getOnlineUsers().then(data => {
+                        console.log("📊 API Response - online users data:", data);
+                        console.log("📊 Data type:", typeof data);
+                        console.log("📊 Data keys:", Object.keys(data || {}));
+                        
+                        const fetchedUsers = Object.keys(data || {});
+                        console.log("👥 Extracted usernames:", fetchedUsers);
+                        
+                        setOnlineUsers(prev => {
+                            const mergeSet = new Set(prev);
+                            fetchedUsers.forEach(user => mergeSet.add(user));
+                            mergeSet.add(username);
+                            console.log("✅ Updated online users:", Array.from(mergeSet));
+                            return mergeSet;
+                        });
+                    })
                     .catch(err => {
-                        console.error("Error fetching online users:", err);
+                        console.error("❌ Error fetching online users:", err);
+                        console.error("❌ Error details:", err.response?.data || err.message);
+                        console.error("❌ Status code:", err.response?.status);
                     });
+                }, 1000);
                 }, (error) => {
                     console.error("STOMP connection error:", error);
                     if(!reconnectInterval){
@@ -167,7 +202,7 @@ const ChatArea = () => {
 
         };
 
-    }, [username, userColor, registerPrivateMessageHandler, unregisterPrivateMessageHandler]);
+    }, [username, userColor, token, registerPrivateMessageHandler, unregisterPrivateMessageHandler]);
 
 
     //internal implementations of the functions 
@@ -246,29 +281,44 @@ const ChatArea = () => {
                     <h2>Users</h2>
                 </div>
 
-                <div className="user-list">
-                    {Array.from(onlineUsers).map((user) => (
-                        <div 
-                        key={user} 
-                        className={`user-item ${user === username ? 'current-user' : ''}`}
-                        onClick={() => openPrivateChat(user)}>
+                <div className="users-list">
+                    {(() => {
+                        const usersList = Array.from(onlineUsers);
+                        console.log("Rendering users list:", usersList);
+                        return usersList.map((user) => (
+                            <div 
+                            key={user} 
+                            className={`user-item ${user === username ? 'current-user' : ''}`}
+                            onClick={() => openPrivateChat(user)}>
 
-                            <div className="user-avatar" style={{backgroundColor: user===username ? userColor : `#007bff`}}>
-                                {user.charAt(0).toUpperCase()}
+                                <div className="user-avatar" style={{backgroundColor: user===username ? userColor : `#007bff`}}>
+                                    {user.charAt(0).toUpperCase()}
+                                </div>
+                                <span>{user}</span>
+                                {user===username && <span className="you-label">(You)</span>}
+                                {unreadMessages.has(user) && (
+                                    <span className="unread-count">{unreadMessages.get(user)}</span>
+                                )}
                             </div>
-                            <span>{user}</span>
-                            {user===username && <span className="you-label">(You)</span>}
-                            {unreadMessages.has(user) && (
-                                <span className="unread-count">{unreadMessages.get(user)}</span>
-                            )}
-                        </div>
-                    ))}
+                        ));
+                    })()}
                 </div>
             </div>
             
             <div className="main-chat">
                 <div className="chat-header">
                     <h4>Welcome, {username}</h4>
+                    <button 
+                        onClick={() => {
+                            console.log("🧪 Manual test: Fetching online users...");
+                            authService.getOnlineUsers()
+                                .then(data => console.log("🧪 Manual test result:", data))
+                                .catch(err => console.error("🧪 Manual test error:", err));
+                        }}
+                        style={{marginLeft: '10px', padding: '5px 10px', fontSize: '12px'}}
+                    >
+                        Test API
+                    </button>
                 </div>
                 
                 <div className="message-container">
@@ -345,7 +395,7 @@ const ChatArea = () => {
                     currentUser={username}
                     recipientUser = {otherUser}
                     userColor = {userColor}
-                    stompClient = {stompClient.current}
+                    stompClient = {stompClient}
                     onClose = {() => {
                         closePrivateChat(otherUser);
                     }}

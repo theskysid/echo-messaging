@@ -50,29 +50,48 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
          }
       }
-      if (jwtToken == null) {
+
+      // Comprehensive token validation - ignore any invalid tokens
+      if (jwtToken == null || jwtToken.trim().isEmpty() ||
+          "null".equalsIgnoreCase(jwtToken) ||
+          "undefined".equalsIgnoreCase(jwtToken) ||
+          !isValidJwtFormat(jwtToken)) {
          filterChain.doFilter(request, response);
          return;
       }
 
-      userId = jwtService.extractUserId(jwtToken);
+      try {
+         userId = jwtService.extractUserId(jwtToken);
 
-      if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+         if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-         var userDetails = userRepository.findById(userId).orElseThrow(()-> new RuntimeException("User not found"));
+            var userDetails = userRepository.findById(userId).orElseThrow(()-> new RuntimeException("User not found"));
 
-         if (jwtService.isTokenValid(jwtToken, userDetails)){
+            if (jwtService.isTokenValid(jwtToken, userDetails)){
 
-            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, Collections.emptyList());
+               UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, Collections.emptyList());
 
-            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+               authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-            SecurityContextHolder.getContext().setAuthentication(authToken);
+               SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
          }
-
+      } catch (Exception e) {
+         // Log the error but don't fail the request - just proceed without authentication
+         System.err.println("JWT processing error: " + e.getMessage());
       }
 
       filterChain.doFilter(request, response);
       return;
+   }
+
+   // Helper method to validate JWT format before parsing
+   private boolean isValidJwtFormat(String token) {
+      if (token == null || token.trim().isEmpty()) {
+         return false;
+      }
+      // JWT should have exactly 2 dots (3 parts: header.payload.signature)
+      long dotCount = token.chars().filter(ch -> ch == '.').count();
+      return dotCount == 2 && token.length() > 10; // Minimum reasonable length
    }
 }

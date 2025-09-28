@@ -2,13 +2,11 @@ package com.theskysid.echobackend.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
-
-import java.awt.*;
 import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "chat_message")
+@Table(name = "chat_messages")
 public class ChatMessage {
 
     @Id

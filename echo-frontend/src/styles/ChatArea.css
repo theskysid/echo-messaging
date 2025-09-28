@@ -133,6 +133,13 @@
     background-color: #fafafa;
 }
 
+.message-container {
+    flex: 1;
+    padding: 15px 20px;
+    overflow-y: auto;
+    background-color: #fafafa;
+}
+
 .message {
     margin-bottom: 15px;
 }
@@ -166,6 +173,11 @@
 }
 
 .time {
+    font-size: 11px;
+    color: #999;
+}
+
+.timestamp {
     font-size: 11px;
     color: #999;
 }

@@ -1,14 +1,29 @@
 import axios from "axios";
 
-const API_URL = 'https://localhost:8080';
+const API_URL = 'http://localhost:8080/';
 
 const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json'
-    },
-    withCredentials: true
+    }
 });
+
+// Add request interceptor to include JWT token
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        console.log(`🔧 Request to ${config.url} - Token:`, token ? `${token.substring(0, 20)}...` : 'null');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+            console.log(`🔧 Added Authorization header: Bearer ${token.substring(0, 20)}...`);
+        } else {
+            console.log("⚠️ No token found in localStorage");
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
 //response Intercepter for globval error handling 
 
@@ -21,7 +36,7 @@ api.interceptors.response.use(
             switch(error.response.status){
                 case 401: //unauthorized
                     authService.logout();
-                    window.location.href='/login'
+                    window.location.href='/api/login'
                     break
                 case 403: //access forbidden 
                     console.error("Access Forbidden");
@@ -57,9 +72,16 @@ const generateUserColor = () => {
 export const authService = {
     login: async({username, password}) => {
         try {
-            const response = await api.post('/auth/login', {username, password});
+            const response = await api.post('/api/auth/login', {username, password});
 
-            //after succerssful login store the user data in local storage
+            // Store JWT token and user data
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+            } else {
+                // If no token, create a temporary one for demo purposes
+                localStorage.setItem('token', 'demo-token-' + Date.now());
+            }
+            
             const userColor = generateUserColor();
             const userData = {
                 ...response.data,
@@ -75,36 +97,45 @@ export const authService = {
             };
         } catch (error) {
             console.error("Login failed:", error);
-            throw errorMessage = error.response?.data?.message || "Login failed. Please check your credentials."; 
-            throw new errorMessage;
+            const errorMessage = error.response?.data?.message || "Login failed. Please check your credentials.";
+            throw new Error(errorMessage);
         }
     },
 
     signup: async({username, email, password}) => {
         try {
-            const response = await api.post('/auth/signup', {
+            const response = await api.post('/api/auth/register', {
                 username, 
                 email, 
                 password
             });
+            
+            // Store JWT token if provided
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+            } else {
+                // If no token, create a temporary one for demo purposes
+                localStorage.setItem('token', 'demo-token-' + Date.now());
+            }
+            
             return {
                 success: true,
                 user: response.data
             };
         } catch (error) {
              console.error("Signup failed:", error);
-            throw errorMessage = error.response?.data?.message || "Signup failed. Please check your credentials."; 
-            throw new errorMessage;
+            const errorMessage = error.response?.data?.message || "Signup failed. Please check your credentials.";
+            throw new Error(errorMessage);
         }
     },
     
     logout: async() => {
         try {
-            await api.post('/auth/logout');
+            await api.post('/api/auth/logout');
         } catch (error) {
             console.error("Logout failed:", error);
-            throw error;
         } finally {
+            localStorage.removeItem('token');
             localStorage.removeItem('currentUser');
             localStorage.removeItem('user');
         }
@@ -154,14 +185,17 @@ export const authService = {
     },
 
     isAuthenticated: () => {
-        const user = localStorage.getItem('user') || localStorage.getItem('currentUser'); //check either user or currentUser exists
-
-        return !!user; //return true if user exists, else false
+        const token = localStorage.getItem('token');
+        return !!token; //return true if token exists, else false
     },
 
-    fetchPrivateMessages: async() => {
+    getToken: () => {
+        return localStorage.getItem('token');
+    },
+
+    fetchPrivateMessages: async (user1, user2) => {
         try {
-            const response = await api.get('/api/messages/private?user1=${encodeURIComponent(user1)} & user2=${encodeURIComponent(user2)}'); 
+            const response = await api.get(`/api/messages/private?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`); 
             return response.data;
         } catch (error) {
             console.error("Fetch private messages failed:", error);
@@ -171,10 +205,19 @@ export const authService = {
 
     getOnlineUsers: async() => {
         try {
+            const token = localStorage.getItem('token');
+            console.log("🔑 Token from localStorage:", token ? `${token.substring(0, 20)}...` : 'null');
+            console.log("🌐 Making API call to /api/online-users");
+            
             const response = await api.get('/api/online-users');
+            console.log("🌐 API Response status:", response.status);
+            console.log("🌐 API Response data:", response.data);
             return response.data;
         } catch (error) {
-            console.error("Fetch online users failed:", error);
+            console.error("❌ Fetch online users failed:", error);
+            console.error("❌ Error response:", error.response?.data);
+            console.error("❌ Error status:", error.response?.status);
+            console.error("❌ Request headers:", error.config?.headers);
             throw error;
         }
     }

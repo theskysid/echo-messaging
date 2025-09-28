@@ -1,0 +1,460 @@
+openapi: 3.0.3
+info:
+  title: Echo Messaging API
+  description: |
+    Real-time chat application API with WebSocket support for instant messaging.
+
+    ## Features
+    - JWT-based authentication
+    - Real-time messaging via WebSockets
+    - Public and private chat rooms
+    - User management and online status
+    - CORS enabled for web applications
+
+    ## Authentication
+    Most endpoints require JWT authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+
+    ## WebSocket Integration
+    - **URL:** `ws://localhost:8080/ws`
+    - **Protocol:** SockJS + STOMP
+    - **Auth:** Include JWT token in connection headers
+  version: 1.0.0
+  contact:
+    name: Echo Messaging API
+    url: http://localhost:8080
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account with username, email, and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            example:
+              username: johndoe
+              email: john@example.com
+              password: password123
+      responses:
+        "200":
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+              example:
+                id: 1
+                username: johndoe
+                email: john@example.com
+                online: false
+        "400":
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and receive JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            example:
+              username: johndoe
+              password: password123
+      responses:
+        "200":
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: JWT token as HttpOnly cookie
+              schema:
+                type: string
+                example: JWT=eyJhbGciOiJIUzM4NCJ9...; HttpOnly; Path=/; Max-Age=3600
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+              example:
+                user:
+                  id: 1
+                  username: johndoe
+                  email: john@example.com
+                  online: false
+                token: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImpvaG5kb2UiLCJpYXQiOjE2OTU5MTIwMDAsImV4cCI6MTY5NTkxNTYwMH0...
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Logout current user and invalidate session
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: string
+                example: User logged out successfully
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /auth/getcurrentuser:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Retrieve information about the currently authenticated user
+      responses:
+        "200":
+          description: Current user information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+              example:
+                id: 1
+                username: johndoe
+                email: john@example.com
+                online: true
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /auth/getonlineusers:
+    get:
+      tags:
+        - Authentication
+      summary: Get online users
+      description: Retrieve list of currently online users
+      responses:
+        "200":
+          description: List of online users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  onlineUsers:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of online usernames
+                  count:
+                    type: integer
+                    description: Number of online users
+                example:
+                  onlineUsers: ["alice", "bob", "charlie"]
+                  count: 3
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /messages/public:
+    get:
+      tags:
+        - Messages
+      summary: Get public messages
+      description: Retrieve all public chat messages
+      responses:
+        "200":
+          description: List of public messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+              example:
+                - id: 1
+                  sender: alice
+                  content: Hello everyone!
+                  type: CHAT
+                  timestamp: "2025-09-28T10:30:00"
+                  color: "#007bff"
+                  recepient: null
+                - id: 2
+                  sender: bob
+                  content: Hi Alice!
+                  type: CHAT
+                  timestamp: "2025-09-28T10:31:00"
+                  color: "#28a745"
+                  recepient: null
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+
+  /messages/private:
+    get:
+      tags:
+        - Messages
+      summary: Get private messages
+      description: Retrieve private messages between two specific users
+      parameters:
+        - name: user1
+          in: query
+          required: true
+          description: First user's username
+          schema:
+            type: string
+          example: alice
+        - name: user2
+          in: query
+          required: true
+          description: Second user's username
+          schema:
+            type: string
+          example: bob
+      responses:
+        "200":
+          description: List of private messages between the two users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+              example:
+                - id: 3
+                  sender: alice
+                  content: Hey Bob, how are you?
+                  type: PRIVATE_MESSAGE
+                  timestamp: "2025-09-28T10:32:00"
+                  color: "#007bff"
+                  recepient: bob
+                - id: 4
+                  sender: bob
+                  content: I'm good, thanks Alice!
+                  type: PRIVATE_MESSAGE
+                  timestamp: "2025-09-28T10:33:00"
+                  color: "#28a745"
+                  recepient: alice
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "400":
+          description: Missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    UserDto:
+      type: object
+      required:
+        - id
+        - username
+        - email
+        - online
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique user identifier
+          example: 1
+        username:
+          type: string
+          description: User's unique username
+          example: johndoe
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: john@example.com
+        online:
+          type: boolean
+          description: User's online status
+          example: true
+
+    ChatMessage:
+      type: object
+      required:
+        - id
+        - sender
+        - content
+        - type
+        - timestamp
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique message identifier
+          example: 1
+        sender:
+          type: string
+          description: Username of message sender
+          example: alice
+        content:
+          type: string
+          description: Message content
+          example: Hello everyone!
+        type:
+          type: string
+          enum: [CHAT, JOIN, LEAVE, PRIVATE_MESSAGE, TYPING]
+          description: Type of message
+          example: CHAT
+        timestamp:
+          type: string
+          format: date-time
+          description: Message timestamp in ISO format
+          example: "2025-09-28T10:30:00"
+        color:
+          type: string
+          description: Hex color code for user identification
+          example: "#007bff"
+        recepient:
+          type: string
+          nullable: true
+          description: Recipient username (for private messages)
+          example: bob
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: User's username
+          example: johndoe
+        password:
+          type: string
+          format: password
+          description: User's password
+          example: password123
+
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          description: Desired username (must be unique)
+          example: johndoe
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: john@example.com
+        password:
+          type: string
+          format: password
+          description: User's password
+          example: password123
+
+    LoginResponse:
+      type: object
+      required:
+        - user
+        - token
+      properties:
+        user:
+          $ref: "#/components/schemas/UserDto"
+        token:
+          type: string
+          description: JWT authentication token
+          example: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VySWQiOjEsInN1YiI6ImpvaG5kb2UiLCJpYXQiOjE2OTU5MTIwMDAsImV4cCI6MTY5NTkxNTYwMH0...
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: Bad Request
+        message:
+          type: string
+          description: Error description
+          example: Invalid request format
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2025-09-28T10:30:00"
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: Unauthorized
+            message: User not authenticated
+            timestamp: "2025-09-28T10:30:00"
+
+    ForbiddenError:
+      description: Access forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error: Forbidden
+            message: Access denied
+            timestamp: "2025-09-28T10:30:00"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT authentication token obtained from the login endpoint.
+        Include the token in the Authorization header: `Authorization: Bearer <token>`
+
+tags:
+  - name: Authentication
+    description: User authentication and management operations
+  - name: Messages
+    description: Chat message operations
+
+externalDocs:
+  description: Echo Messaging Frontend
+  url: http://localhost:5173

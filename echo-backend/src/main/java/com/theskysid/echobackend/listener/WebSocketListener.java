@@ -23,7 +23,8 @@ public class WebSocketListener {
    @Autowired
    private SimpMessageSendingOperations messagingTemplate;
 
-   private static final Logger logger = (Logger) LoggerFactory.getLogger(WebSocketListener.class);
+   private static final Logger logger = LoggerFactory.getLogger(WebSocketListener.class);
+
    @Autowired
    private ChatMessageRepository chatMessageRepository;
 
@@ -32,19 +33,22 @@ public class WebSocketListener {
       logger.info("Connected to websocket");
    }
 
+   @EventListener
    public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
 
       StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
-      String username = headerAccessor.getSessionAttributes().get("username").toString();
 
-      System.out.println("User Disconnected from socket: " + username);
+      if (headerAccessor.getSessionAttributes() != null &&
+          headerAccessor.getSessionAttributes().get("username") != null) {
+         String username = headerAccessor.getSessionAttributes().get("username").toString();
 
-      userService.setUserOnlineStatus(username, false);
-      ChatMessage chatMessage = new ChatMessage();
-      chatMessage.setType(ChatMessage.MessageType.LEAVE);
-      chatMessage.setSender(username);
-      messagingTemplate.convertAndSend("/topic/public", chatMessage);
+         logger.info("User Disconnected from socket: " + username);
 
-
+         userService.setUserOnlineStatus(username, false);
+         ChatMessage chatMessage = new ChatMessage();
+         chatMessage.setType(ChatMessage.MessageType.LEAVE);
+         chatMessage.setSender(username);
+         messagingTemplate.convertAndSend("/topic/public", chatMessage);
+      }
    }
 }

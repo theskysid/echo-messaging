@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echo Messaging API Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f8f9fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+        }
+        
+        .section {
+            background: white;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .endpoint {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .method {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-right: 1rem;
+        }
+        
+        .method.post { background: #28a745; color: white; }
+        .method.get { background: #007bff; color: white; }
+        .method.put { background: #ffc107; color: black; }
+        .method.delete { background: #dc3545; color: white; }
+        
+        .endpoint-url {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        pre {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            margin: 1rem 0;
+        }
+        
+        code {
+            background: #f8f9fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #dee2e6;
+        }
+        
+        .test-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .test-button:hover {
+            background: #5a6fd8;
+        }
+        
+        .test-result {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .test-result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .test-result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .nav {
+            background: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .nav li {
+            margin: 0 1rem;
+        }
+        
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .nav a:hover {
+            background: #f8f9fa;
+        }
+        
+        .auth-token {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+        
+        .auth-token input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            .nav ul {
+                flex-direction: column;
+                align-items: center;
+            }
+            .nav li {
+                margin: 0.25rem 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Echo Messaging API Documentation</h1>
+            <p>Real-time chat application with WebSocket support</p>
+            <p><strong>Base URL:</strong> http://localhost:8080/api</p>
+        </header>
+        
+        <nav class="nav">
+            <ul>
+                <li><a href="#authentication">🔐 Authentication</a></li>
+                <li><a href="#messages">💬 Messages</a></li>
+                <li><a href="#websocket">🔌 WebSocket</a></li>
+                <li><a href="#testing">🧪 Testing</a></li>
+            </ul>
+        </nav>
+        
+        <div class="auth-token">
+            <label for="authToken"><strong>Authentication Token:</strong></label>
+            <input type="text" id="authToken" placeholder="Enter JWT token here (will be auto-filled after login)">
+            <small>This token will be used automatically for authenticated requests below.</small>
+        </div>
+        
+        <section id="authentication" class="section">
+            <h2>🔐 Authentication Endpoints</h2>
+            
+            <div class="endpoint">
+                <div class="method post">POST</div>
+                <span class="endpoint-url">/api/auth/register</span>
+                <p><strong>Description:</strong> Register a new user account</p>
+                
+                <h4>Request Body:</h4>
+                <pre><code>{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "test123"
+}</code></pre>
+                
+                <button class="test-button" onclick="testEndpoint('register')">Test Registration</button>
+                <div id="result-register" class="test-result"></div>
+            </div>
+            
+            <div class="endpoint">
+                <div class="method post">POST</div>
+                <span class="endpoint-url">/api/auth/login</span>
+                <p><strong>Description:</strong> Authenticate user and receive JWT token</p>
+                
+                <h4>Request Body:</h4>
+                <pre><code>{
+  "username": "testuser",
+  "password": "test123"
+}</code></pre>
+                
+                <button class="test-button" onclick="testEndpoint('login')">Test Login</button>
+                <div id="result-login" class="test-result"></div>
+            </div>
+            
+            <div class="endpoint">
+                <div class="method get">GET</div>
+                <span class="endpoint-url">/api/auth/getcurrentuser</span>
+                <p><strong>Description:</strong> Get currently authenticated user information</p>
+                <p><strong>Authentication:</strong> Required (Bearer Token)</p>
+                
+                <button class="test-button" onclick="testEndpoint('currentuser')">Test Get Current User</button>
+                <div id="result-currentuser" class="test-result"></div>
+            </div>
+            
+            <div class="endpoint">
+                <div class="method get">GET</div>
+                <span class="endpoint-url">/api/auth/getonlineusers</span>
+                <p><strong>Description:</strong> Get list of currently online users</p>
+                <p><strong>Authentication:</strong> Required (Bearer Token)</p>
+                
+                <button class="test-button" onclick="testEndpoint('onlineusers')">Test Get Online Users</button>
+                <div id="result-onlineusers" class="test-result"></div>
+            </div>
+        </section>
+        
+        <section id="messages" class="section">
+            <h2>💬 Message Endpoints</h2>
+            
+            <div class="endpoint">
+                <div class="method get">GET</div>
+                <span class="endpoint-url">/api/messages/public</span>
+                <p><strong>Description:</strong> Retrieve all public chat messages</p>
+                <p><strong>Authentication:</strong> Required (Bearer Token)</p>
+                
+                <button class="test-button" onclick="testEndpoint('publicmessages')">Test Get Public Messages</button>
+                <div id="result-publicmessages" class="test-result"></div>
+            </div>
+            
+            <div class="endpoint">
+                <div class="method get">GET</div>
+                <span class="endpoint-url">/api/messages/private?user1=alice&user2=bob</span>
+                <p><strong>Description:</strong> Retrieve private messages between two users</p>
+                <p><strong>Authentication:</strong> Required (Bearer Token)</p>
+                
+                <h4>Query Parameters:</h4>
+                <ul>
+                    <li><code>user1</code> - First user's username</li>
+                    <li><code>user2</code> - Second user's username</li>
+                </ul>
+                
+                <button class="test-button" onclick="testEndpoint('privatemessages')">Test Get Private Messages</button>
+                <div id="result-privatemessages" class="test-result"></div>
+            </div>
+        </section>
+        
+        <section id="websocket" class="section">
+            <h2>🔌 WebSocket Integration</h2>
+            <p><strong>WebSocket URL:</strong> <code>ws://localhost:8080/ws</code></p>
+            <p><strong>Protocol:</strong> SockJS + STOMP</p>
+            
+            <h3>Subscribe Destinations:</h3>
+            <ul>
+                <li><code>/topic/public</code> - Public chat messages</li>
+                <li><code>/user/{username}/queue/messages</code> - Private messages</li>
+            </ul>
+            
+            <h3>Send Destinations:</h3>
+            <ul>
+                <li><code>/app/chat.addUser</code> - Join chat</li>
+                <li><code>/app/chat.sendMessage</code> - Send public message</li>
+                <li><code>/app/chat.sendPrivateMessage</code> - Send private message</li>
+            </ul>
+            
+            <h4>JavaScript Example:</h4>
+            <pre><code>const socket = new SockJS('http://localhost:8080/ws');
+const stompClient = Stomp.over(socket);
+
+stompClient.connect({
+  'Authorization': 'Bearer ' + token
+}, function(frame) {
+  // Subscribe to public messages
+  stompClient.subscribe('/topic/public', function(message) {
+    const chatMessage = JSON.parse(message.body);
+    console.log('Public message:', chatMessage);
+  });
+  
+  // Send a message
+  stompClient.send('/app/chat.sendMessage', {}, JSON.stringify({
+    sender: 'username',
+    content: 'Hello everyone!',
+    type: 'CHAT'
+  }));
+});</code></pre>
+        </section>
+        
+        <section id="testing" class="section">
+            <h2>🧪 Testing Instructions</h2>
+            
+            <h3>Prerequisites:</h3>
+            <ul>
+                <li>Backend running on <code>http://localhost:8080</code></li>
+                <li>Frontend running on <code>http://localhost:5173</code></li>
+            </ul>
+            
+            <h3>Testing Flow:</h3>
+            <ol>
+                <li>Click "Test Registration" to create a new user</li>
+                <li>Click "Test Login" to authenticate (token will be auto-filled)</li>
+                <li>Test other endpoints with the authenticated token</li>
+                <li>Open the frontend application to test real-time features</li>
+            </ol>
+            
+            <h3>Additional Testing Tools:</h3>
+            <ul>
+                <li><strong>Postman Collection:</strong> Import <code>Echo_Messaging_API.postman_collection.json</code></li>
+                <li><strong>cURL Scripts:</strong> Use the provided bash test scripts</li>
+                <li><strong>Frontend UI:</strong> <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></li>
+            </ul>
+        </section>
+    </div>
+    
+    <script>
+        const baseUrl = 'http://localhost:8080/api';
+        
+        async function testEndpoint(endpoint) {
+            const resultDiv = document.getElementById(`result-${endpoint}`);
+            const token = document.getElementById('authToken').value;
+            
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Testing...';
+            resultDiv.className = 'test-result';
+            
+            try {
+                let response;
+                
+                switch(endpoint) {
+                    case 'register':
+                        response = await fetch(`${baseUrl}/auth/register`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                username: 'testuser_' + Date.now(),
+                                email: `test${Date.now()}@example.com`,
+                                password: 'test123'
+                            })
+                        });
+                        break;
+                        
+                    case 'login':
+                        response = await fetch(`${baseUrl}/auth/login`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                username: 'testuser',
+                                password: 'test123'
+                            })
+                        });
+                        break;
+                        
+                    case 'currentuser':
+                        response = await fetch(`${baseUrl}/auth/getcurrentuser`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        break;
+                        
+                    case 'onlineusers':
+                        response = await fetch(`${baseUrl}/auth/getonlineusers`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        break;
+                        
+                    case 'publicmessages':
+                        response = await fetch(`${baseUrl}/messages/public`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        break;
+                        
+                    case 'privatemessages':
+                        response = await fetch(`${baseUrl}/messages/private?user1=alice&user2=bob`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        break;
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'test-result success';
+                    resultDiv.innerHTML = `
+                        <strong>✅ Success (${response.status})</strong><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    
+                    // Auto-fill token if login was successful
+                    if (endpoint === 'login' && data.token) {
+                        document.getElementById('authToken').value = data.token;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+                
+            } catch (error) {
+                resultDiv.className = 'test-result error';
+                resultDiv.innerHTML = `
+                    <strong>❌ Error:</strong><br>
+                    ${error.message}
+                `;
+            }
+        }
+        
+        // Add smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

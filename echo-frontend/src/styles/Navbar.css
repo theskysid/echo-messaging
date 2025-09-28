@@ -16,6 +16,8 @@
     justify-content: space-between;
     align-items: center;
     height: 70px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Brand Styling */
@@ -57,6 +59,7 @@
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    flex-wrap: wrap;
 }
 
 .navbar-link {
@@ -101,6 +104,7 @@
     border-radius: 25px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    white-space: nowrap;
 }
 
 .user-info {
@@ -137,7 +141,10 @@
 @media (max-width: 768px) {
     .navbar-container {
         padding: 0 0.5rem;
-        height: 60px;
+        height: auto;
+        min-height: 60px;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .navbar-brand {
@@ -150,6 +157,7 @@
 
     .navbar-menu {
         gap: 0.8rem;
+        flex-wrap: wrap;
     }
 
     .navbar-link {
@@ -158,10 +166,11 @@
     }
 
     .navbar-user {
-        flex-direction: column;
+        flex-direction: row;
         gap: 0.5rem;
         padding: 0.4rem 0.8rem;
         background: rgba(255, 255, 255, 0.1);
+        flex-wrap: wrap;
     }
 
     .user-info {
@@ -190,7 +199,7 @@
     }
 
     .navbar-user {
-        flex-direction: row;`
+        flex-direction: row;
         justify-content: center;
     }
 }

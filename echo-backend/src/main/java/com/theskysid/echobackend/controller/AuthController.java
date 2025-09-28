@@ -15,11 +15,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
-
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
+@CrossOrigin(origins = { "http://localhost:5176", "http://localhost:5174" }, allowCredentials = "true")
 public class AuthController {
 
    @Autowired
@@ -28,25 +29,32 @@ public class AuthController {
    @Autowired
    private UserRepository userRepository;
 
-   @PostMapping("/signup")
-   public ResponseEntity<UserDto> signUp(@RequestBody RegisterRequestDto registerRequestDto) {
+   @PostMapping("/register")
+   public ResponseEntity<UserDto> register(@RequestBody RegisterRequestDto registerRequestDto) {
       return ResponseEntity.ok(authenticationService.signup(registerRequestDto));
    }
 
    @PostMapping("/login")
-   public ResponseEntity<UserDto> login(@RequestBody LoginRequestDto loginRequestDto) {
+   public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequestDto loginRequestDto) {
 
-      LoginResponseDto  loginResponseDto = authenticationService.login(loginRequestDto);
+      LoginResponseDto loginResponseDto = authenticationService.login(loginRequestDto);
 
+      // Create response with both user data and token
+      Map<String, Object> response = new HashMap<>();
+      response.put("user", loginResponseDto.getUserDto());
+      response.put("token", loginResponseDto.getToken());
+
+      // Also set as httpOnly cookie for additional security
       ResponseCookie responseCookie = ResponseCookie.from("JWT", loginResponseDto.getToken())
-              .httpOnly(true)
-              .secure(true)
-              .path("/")
-              .maxAge(1*60*60) //1 hour
-              .build();
+            .httpOnly(true)
+            .secure(false) // Set to false for localhost development
+            .path("/")
+            .maxAge(1 * 60 * 60) // 1 hour
+            .build();
+
       return ResponseEntity.ok()
-              .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
-              .body(loginResponseDto.getUserDto());
+            .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
+            .body(response);
    }
 
    @PostMapping("/logout")
@@ -55,7 +63,7 @@ public class AuthController {
    }
 
    @GetMapping("/getonlineusers")
-   public ResponseEntity<Map<String, Object>> getOnlineUsers(){
+   public ResponseEntity<Map<String, Object>> getOnlineUsers() {
       return ResponseEntity.ok(authenticationService.getOnlineUsers());
    }
 
@@ -65,10 +73,10 @@ public class AuthController {
          return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
       }
 
-      String username = authentication.getName();
-      User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("Username not found"));
+      // Get the user directly from the principal (set by JWT filter)
+      User user = (User) authentication.getPrincipal();
 
-      return ResponseEntity.ok(convertToUserDto(user)); //converting the user to UserDto
+      return ResponseEntity.ok(convertToUserDto(user)); // converting the user to UserDto
    }
 
    public UserDto convertToUserDto(User user) {

@@ -53,10 +53,13 @@ public class AuthenticationService {
    }
 
    public LoginResponseDto login(LoginRequestDto loginRequestDto) {
+      // First authenticate the user - this will throw an exception if credentials are invalid
+      authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequestDto.getUsername(), loginRequestDto.getPassword()));
+
+      // If authentication succeeds, then get the user details
       User user = userRepository.findByUsername(loginRequestDto.getUsername())
               .orElseThrow(() -> new RuntimeException("Username not found"));
 
-      authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequestDto.getUsername(), loginRequestDto.getPassword()));
       String jwtToken = jwtService.generateToken(user);
 
       return LoginResponseDto.builder()

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, use } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import '../styles/PrivateChat.css';
 
 const PrivateChat = ({
@@ -24,8 +24,8 @@ const PrivateChat = ({
         scrollToBottom();
     }, [messages]);
 
-    const createMessageId = () => {
-        return '${msg.sender} - ${msg.recipient} - ${msg.content} - ${msg.timestamp}';  
+    const createMessageId = (msg) => {
+        return `${msg.sender}-${msg.recipient}-${msg.content}-${msg.timestamp}`;  
     };
     
     useEffect(() => {
@@ -57,7 +57,7 @@ const PrivateChat = ({
             }
         };
         loadMessageHistory();
-        registerPrivateMessageHandler(recipientUser, handleIncomingPrivateMessage);
+    registerPrivateMessageHandler(recipientUser, handleIncomingPrivateMessage);
 
         return () => {
             isMounted = false;
@@ -67,32 +67,29 @@ const PrivateChat = ({
     
     //implementing the functions
 
-    const handleIncomingPrivateMessage = (priavateMessage) => { 
-
-        const messageId = priavateMessage.id || createMessageId(priavateMessage);
-        const isOwnMessage = priavateMessage.sender === currentUser;
-
-
-        const isRelevantMessage = (priavateMessage.sender === currentUser && priavateMessage.recipient === recipientUser) ||
-                                  (priavateMessage.sender === recipientUser && priavateMessage.recipient === currentUser);
+    const handleIncomingPrivateMessage = (privateMessage) => { 
+        const messageId = privateMessage.id || createMessageId(privateMessage);
+        const isOwnMessage = privateMessage.sender === currentUser;
+        const isRelevantMessage = (privateMessage.sender === currentUser && privateMessage.recipient === recipientUser) ||
+                                  (privateMessage.sender === recipientUser && privateMessage.recipient === currentUser);
 
         if (isRelevantMessage && !isOwnMessage) {
             if (!messageIdRef.current.has(messageId)) {
-                const newMsg = { ...priavateMessage, id: messageId };
+                const newMsg = { ...privateMessage, id: messageId };
+                messageIdRef.current.add(messageId);
+                setMessages((prevMessages) => [...prevMessages, newMsg]);
             }
-            messageIdRef.current.add(messageId);
-            setMessages((prevMessages) => [...prevMessages, newMessage]);
         }    
     };
 
     const sendPrivateMessage = (e) => {
         e.preventDefault();
-        if (message.trim() && stompClient.current && stompClient.current.connected ) {
+        if (newMessage.trim() && stompClient.current && stompClient.current.connected ) {
             const timestamp = new Date();
             const privateMessage = {
                 sender: currentUser,
                 recipient: recipientUser,
-                content: message.trim(),
+                content: newMessage.trim(),
                 type: "PRIVATE_MESSAGE",
                 timestamp: timestamp,
                 color: userColor
@@ -112,7 +109,7 @@ const PrivateChat = ({
             try{
                 if(stompClient.current.connected){
                     stompClient.current.send("/app/chat.sendMessage", {}, JSON.stringify(privateMessage));
-                    setMessage("");
+                    setNewMessage("");
                 } else {
                     setMessages(prev => prev.filter(msg => msg.id !== messageId));
                     messageIdRef.current.delete(messageId);
@@ -157,26 +154,24 @@ const PrivateChat = ({
                     </div>
                     <h3>{recipientUser}</h3>
                 </div>
-                <button onClick={onCose} className= "close-button">Close</button>
+                <button onClick={onClose} className="close-button">Close</button>
             </div>
             <div className="private-message-container">
-                {messageIdRef.length===0 ? (
+                {messages.length === 0 ? (
                     <div className="no-message">
                         <p>No Messages yet. Start the conversation!!!</p>
                     </div>
                 ): (
-                    messageIdRef.map((msg) => (
-                        <div key = {msg.id} className={"private-message ${msg.sender === currentUser ? 'own-message' : 'received-message'}"}>
+                    messages.map((msg) => (
+                        <div key={msg.id} className={`private-message ${msg.sender === currentUser ? 'own-message' : 'received-message'}`}>
                             <div className="message-header">
                                 <span className='sender-name' style={{color: msg.color || '#6b73ff'}}>
                                     {msg.sender === currentUser ? 'You' : msg.sender}</span>
                                 <span className="timestamp">
                                    {formatTime(msg.timestamp)}
                                 </span>
-                                <div className="message-content">
-                                    {msg.content}
-                                </div>
                             </div>
+                            <div className="message-content">{msg.content}</div>
                         </div>
 
                     ))
@@ -188,9 +183,9 @@ const PrivateChat = ({
                 <form onSubmit={sendPrivateMessage} className='private-message-form'>
 
 
-                    <input type='text' placeholder={`message ${recipientUser}`} value={message} onChange={(e) => setMessage(e.target.value)} className='private-message-input'maxLength={500}/>
+                    <input type='text' placeholder={`message ${recipientUser}`} value={newMessage} onChange={(e) => setNewMessage(e.target.value)} className='private-message-input' maxLength={500}/>
 
-                    <button type='submit' className='private-send-button' disabled={!message.trim()}>
+                    <button type='submit' className='private-send-button' disabled={!newMessage.trim()}>
                        Send
                     </button>
 
@@ -202,3 +197,5 @@ const PrivateChat = ({
         </div>
     )
 }
+
+export default PrivateChat;
