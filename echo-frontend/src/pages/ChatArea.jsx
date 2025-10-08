@@ -1,15 +1,14 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/ChatArea.css';
-import { authService } from '../services/authService.js';
 import SockJS from 'sockjs-client';
 import { Stomp } from '@stomp/stompjs';
-import PrivateChat from './PrivateChat.jsx';
-const ChatArea = () => {
+import { authService } from '../services/authService';
+import PrivateChat from './PrivateChat';
+import '../styles/ChatArea.css';
 
+const ChatArea = () => {
     const navigate = useNavigate();
     const currentUser = authService.getCurrentUser();
-    const token = authService.getToken();
 
     useEffect(() => {
         if (!currentUser) {
@@ -18,27 +17,30 @@ const ChatArea = () => {
         }
     }, [currentUser, navigate]);
 
-    const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
+    const [message, setMessage] = useState('');
+    const [onlineUsers, setOnlineUsers] = useState(new Set());
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isTyping, setIsTyping] = useState('');
     const [privateChats, setPrivateChats] = useState(new Map());
     const [unreadMessages, setUnreadMessages] = useState(new Map());
-    const [onlineUsers, setOnlineUsers] = useState(new Set());
-    
+
     const privateMessageHandlers = useRef(new Map());
     const stompClient = useRef(null);
-    const messageEndRef = useRef(null);
+    const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
 
-    const emojis = [
-        "😀", "😂", "😍", "😎", "😭", "😡", "👍", "🙏", "🎉", "💔",
-        "🔥", "🌟", "💯", "🎶", "🍕", "🍔", "⚽", "🏀", "🚗", "✈️"
-    ];
+    const emojis = ['😀', '😂', '😍', '🤔', '👍', '❤️', '🎉', '🔥', '😎', '⭐', '✨', '💯'];
+
+    if (!currentUser) {
+        return null;
+    }
+
+    const { username, color: userColor } = currentUser;
 
     const scrollToBottom = () => {
-        messageEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
 
     const registerPrivateMessageHandler = useCallback((otherUser, handler) => {
         privateMessageHandlers.current.set(otherUser, handler);
@@ -48,22 +50,10 @@ const ChatArea = () => {
         privateMessageHandlers.current.delete(otherUser);
     }, []);
 
-    if (!currentUser) {
-        return null; // or a loading spinner
-    }
-
-    const {username, color: userColor} = currentUser;
-
     useEffect(() => {
-        console.log("🚀 ChatArea useEffect triggered for user:", username);
         let reconnectInterval;
-
-        const connectAndFetch = async() => {
-            if(!username) {
-                console.log("❌ No username found, aborting connection");
-                return;
-            }
-            console.log("🔄 Starting connectAndFetch for user:", username);
+        const connectAndFetch = async () => {
+            if (!username) return;
 
             setOnlineUsers(prev => {
                 const newSet = new Set(prev);
@@ -71,42 +61,30 @@ const ChatArea = () => {
                 return newSet;
             });
 
-            console.log("🔌 Attempting to connect to WebSocket...");
             const socket = new SockJS('http://localhost:8080/ws');
             stompClient.current = Stomp.over(socket);
 
-            // Include JWT token in connection headers
-            const headers = {
-                'Authorization': `Bearer ${token}`,
+            stompClient.current.connect({
                 'client-id': username,
                 'session-id': Date.now().toString(),
                 'username': username
-            };
-            console.log("🔑 Connection headers:", headers);
-
-            stompClient.current.connect(headers, () => {
-                console.log("✅ WebSocket connected successfully for user:", username);
+            }, (frame) => {
                 clearInterval(reconnectInterval);
-                
-                const GroupChat = stompClient.current.subscribe('/topic/public', (msg) => {
+
+                const publicSub = stompClient.current.subscribe('/topic/public', (msg) => {
                     const chatMessage = JSON.parse(msg.body);
-                    console.log("📨 Received public message:", chatMessage);
 
                     setOnlineUsers(prev => {
-                       const newUsers = new Set(prev);
-                       if(chatMessage.type === 'JOIN'){
-                            console.log("User joined:", chatMessage.sender);
+                        const newUsers = new Set(prev);
+                        if (chatMessage.type === 'JOIN') {
                             newUsers.add(chatMessage.sender);
-                       } else if(chatMessage.type === 'LEAVE'){
-                            console.log("User left:", chatMessage.sender);
+                        } else if (chatMessage.type === 'LEAVE') {
                             newUsers.delete(chatMessage.sender);
-                       }
-                       console.log("Online users after JOIN/LEAVE:", Array.from(newUsers));
-                       return newUsers;         
-
+                        }
+                        return newUsers;
                     });
 
-                    if(chatMessage.type === 'TYPING'){
+                    if (chatMessage.type === 'TYPING') {
                         setIsTyping(chatMessage.sender);
                         clearTimeout(typingTimeoutRef.current);
                         typingTimeoutRef.current = setTimeout(() => {
@@ -117,25 +95,23 @@ const ChatArea = () => {
 
                     setMessages(prev => [...prev, {
                         ...chatMessage,
-                        timestamp: chatMessage.timestamp || new Date().toISOString(),
+                        timestamp: chatMessage.timestamp || new Date(),
                         id: chatMessage.id || (Date.now() + Math.random())
                     }]);
-
                 });
 
-                const PrivateChat = stompClient.current.subscribe(`/user/${username}/queue/user`, (msg) => {
+                const privateSub = stompClient.current.subscribe(`/user/${username}/queue/private`, (msg) => {
                     const privateMessage = JSON.parse(msg.body);
                     const otherUser = privateMessage.sender === username ? privateMessage.recipient : privateMessage.sender;
-
                     const handler = privateMessageHandlers.current.get(otherUser);
 
                     if (handler) {
                         try {
                             handler(privateMessage);
                         } catch (error) {
-                            console.error("Error in private message handler:", error);
+                            console.error('Error calling handler:', error);
                         }
-                    } else if(privateMessage.recipient === username){
+                    } else if (privateMessage.recipient === username) {
                         setUnreadMessages(prev => {
                             const newUnread = new Map(prev);
                             const currentCount = newUnread.get(otherUser) || 0;
@@ -143,71 +119,51 @@ const ChatArea = () => {
                             return newUnread;
                         });
                     }
-                });           
-                
-                const joinMessage = {
-                    username: username, 
+                });
+
+                stompClient.current.send("/app/chat.addUser", {}, JSON.stringify({
+                    sender: username,
                     type: 'JOIN',
                     color: userColor
-                };
-                
-                console.log("🚀 Sending JOIN message:", joinMessage);
-                stompClient.current.send("/app/chat.addUser", {}, JSON.stringify(joinMessage));
-                console.log("✅ JOIN message sent for user:", username);
-                
-                // Fetch online users after a brief delay to allow server processing
-                setTimeout(() => {
-                    console.log("🔄 Fetching online users from API...");
-                    console.log("🔑 Current user token:", token ? `${token.substring(0, 20)}...` : 'null');
-                    authService.getOnlineUsers().then(data => {
-                        console.log("📊 API Response - online users data:", data);
-                        console.log("📊 Data type:", typeof data);
-                        console.log("📊 Data keys:", Object.keys(data || {}));
-                        
-                        const fetchedUsers = Object.keys(data || {});
-                        console.log("👥 Extracted usernames:", fetchedUsers);
-                        
+                }));
+
+                authService.getOnlineUsers()
+                    .then(data => {
+                        const fetchedUsers = Object.keys(data);
                         setOnlineUsers(prev => {
-                            const mergeSet = new Set(prev);
-                            fetchedUsers.forEach(user => mergeSet.add(user));
-                            mergeSet.add(username);
-                            console.log("✅ Updated online users:", Array.from(mergeSet));
-                            return mergeSet;
+                            const mergedSet = new Set(prev);
+                            fetchedUsers.forEach(user => mergedSet.add(user));
+                            mergedSet.add(username);
+                            return mergedSet;
                         });
                     })
-                    .catch(err => {
-                        console.error("❌ Error fetching online users:", err);
-                        console.error("❌ Error details:", err.response?.data || err.message);
-                        console.error("❌ Status code:", err.response?.status);
+                    .catch(error => {
+                        console.error('Error fetching initial online users:', error);
                     });
-                }, 1000);
-                }, (error) => {
-                    console.error("STOMP connection error:", error);
-                    if(!reconnectInterval){
-                        reconnectInterval = setInterval(() => {
-                            connectAndFetch();
-                        }, 5000);
-                    }
-                });
+
+            }, (error) => {
+                console.error('STOMP connection error:', error);
+                if (!reconnectInterval) {
+                    reconnectInterval = setInterval(() => {
+                        connectAndFetch();
+                    }, 5000);
+                }
+            });
         };
 
         connectAndFetch();
 
         return () => {
-            if(stompClient.current && stompClient.current.connected){
+            if (stompClient.current && stompClient.current.connected) {
                 stompClient.current.disconnect();
             }
             clearTimeout(typingTimeoutRef.current);
             clearInterval(reconnectInterval);
-
         };
+    }, [username, userColor, registerPrivateMessageHandler, unregisterPrivateMessageHandler]);
 
-    }, [username, userColor, token, registerPrivateMessageHandler, unregisterPrivateMessageHandler]);
-
-
-    //internal implementations of the functions 
     const openPrivateChat = (otherUser) => {
-        if(otherUser === username) return;
+        if (otherUser === username) return;
 
         setPrivateChats(prev => {
             const newChats = new Map(prev);
@@ -220,7 +176,7 @@ const ChatArea = () => {
             newUnread.delete(otherUser);
             return newUnread;
         });
-    }
+    };
 
     const closePrivateChat = (otherUser) => {
         setPrivateChats(prev => {
@@ -229,29 +185,28 @@ const ChatArea = () => {
             return newChats;
         });
         unregisterPrivateMessageHandler(otherUser);
-    }
+    };
 
     const sendMessage = (e) => {
         e.preventDefault();
-        if(stompClient.current && stompClient.current.connected && message.trim()){
+        if (message.trim() && stompClient.current && stompClient.current.connected) {
             const chatMessage = {
                 sender: username,
                 content: message,
                 type: 'CHAT',
-                color: userColor,
-                // timestamp: new Date().toISOString()
+                color: userColor
             };
 
             stompClient.current.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
-            setMessage("");
+            setMessage('');
             setShowEmojiPicker(false);
         }
-    }
+    };
 
     const handleTyping = (e) => {
         setMessage(e.target.value);
 
-        if(stompClient.current && stompClient.current.connected && e.target.value.trim()){
+        if (stompClient.current && stompClient.current.connected && e.target.value.trim()) {
             stompClient.current.send("/app/chat.sendMessage", {}, JSON.stringify({
                 sender: username,
                 type: 'TYPING'
@@ -262,7 +217,7 @@ const ChatArea = () => {
     const addEmoji = (emoji) => {
         setMessage(prev => prev + emoji);
         setShowEmojiPicker(false);
-    }
+    };
 
     const formatTime = (timestamp) => {
         return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -270,88 +225,76 @@ const ChatArea = () => {
             hour12: false,
             hour: '2-digit',
             minute: '2-digit'
-        } );
+        });
     };
-    
+
+    const handleDisconnect = async () => {
+        try {
+            await authService.logout();
+            navigate('/login');
+        } catch (error) {
+            console.error('Logout error:', error);
+            navigate('/login');
+        }
+    };
 
     return (
         <div className="chat-container">
             <div className="sidebar">
                 <div className="sidebar-header">
-                    <h2>Users</h2>
+                    <h3>Users</h3>
+
                 </div>
-
                 <div className="users-list">
-                    {(() => {
-                        const usersList = Array.from(onlineUsers);
-                        console.log("Rendering users list:", usersList);
-                        return usersList.map((user) => (
-                            <div 
-                            key={user} 
+                    {Array.from(onlineUsers).map(user => (
+                        <div
+                            key={user}
                             className={`user-item ${user === username ? 'current-user' : ''}`}
-                            onClick={() => openPrivateChat(user)}>
-
-                                <div className="user-avatar" style={{backgroundColor: user===username ? userColor : `#007bff`}}>
-                                    {user.charAt(0).toUpperCase()}
-                                </div>
-                                <span>{user}</span>
-                                {user===username && <span className="you-label">(You)</span>}
-                                {unreadMessages.has(user) && (
-                                    <span className="unread-count">{unreadMessages.get(user)}</span>
-                                )}
+                            onClick={() => openPrivateChat(user)}
+                        >
+                            <div className="user-avatar" style={{ backgroundColor: user === username ? userColor : '#007bff' }}>
+                                {user.charAt(0).toUpperCase()}
                             </div>
-                        ));
-                    })()}
+                            <span>{user}</span>
+                            {user === username && <span className="you-label">(You)</span>}
+                            {unreadMessages.has(user) && (
+                                <span className="unread-count">{unreadMessages.get(user)}</span>
+                            )}
+                        </div>
+                    ))}
                 </div>
             </div>
-            
+
             <div className="main-chat">
                 <div className="chat-header">
-                    <h4>Welcome, {username}</h4>
-                    <button 
-                        onClick={() => {
-                            console.log("🧪 Manual test: Fetching online users...");
-                            authService.getOnlineUsers()
-                                .then(data => console.log("🧪 Manual test result:", data))
-                                .catch(err => console.error("🧪 Manual test error:", err));
-                        }}
-                        style={{marginLeft: '10px', padding: '5px 10px', fontSize: '12px'}}
-                    >
-                        Test API
-                    </button>
+                    <h2>Chat Area</h2>
+                    <p>Welcome, {username}!</p>
                 </div>
-                
-                <div className="message-container">
+
+                <div className="messages-container">
                     {messages.map((msg) => (
-                        <div key={msg.id} className={`message ${msg.type.toLowerCase()}`}> 
+                        <div key={msg.id} className={`message ${msg.type.toLowerCase()}`}>
                             {msg.type === 'JOIN' && (
                                 <div className="system-message">
-                                    {msg.sender} joined the group.
+                                    {msg.sender} joined the chat
                                 </div>
                             )}
-
-                            {
-                                msg.type === 'LEAVE' && (
-                                    <div className="system-message">
-                                        {msg.sender} left the group.
+                            {msg.type === 'LEAVE' && (
+                                <div className="system-message">
+                                    {msg.sender} left the chat
+                                </div>
+                            )}
+                            {msg.type === 'CHAT' && (
+                                <div className={`chat-message ${msg.sender === username ? 'own-message' : ''}`}>
+                                    <div className="message-info">
+                                        <span className="sender" style={{ color: msg.color || '#007bff' }}>
+                                            {msg.sender}
+                                        </span>
+                                        <span className="time">{formatTime(msg.timestamp)}</span>
                                     </div>
-                                )
-                            }
-
-                            {
-                                msg.type === 'CHAT' && (
-                                    <div className={`chat-message ${msg.sender === username ? 'own-message' : ''}`}>
-                                        <div className="message-info">
-                                            <span className='sender' style={{color: msg.color || '#007bff'}}>
-                                                {msg.sender}
-                                            </span>
-                                            <span className="timestamp">{formatTime(msg.timestamp)}</span>
-                                        </div>
-                                        <div className="message-text">{msg.content}</div>
-                                    </div>
-                                )
-                            }
-
+                                    <div className="message-text">{msg.content}</div>
+                                </div>
+                            )}
                         </div>
                     ))}
 
@@ -361,52 +304,176 @@ const ChatArea = () => {
                         </div>
                     )}
 
-                    <div ref={messageEndRef} />
-
+                    <div ref={messagesEndRef} />
                 </div>
 
                 <div className="input-area">
                     {showEmojiPicker && (
                         <div className="emoji-picker">
-                            {emojis.map((emoji) => (
-                                <button key={emoji} onClick={() => addEmoji(emoji)}>{emoji}</button>
+                            {emojis.map(emoji => (
+                                <button key={emoji} onClick={() => addEmoji(emoji)}>
+                                    {emoji}
+                                </button>
                             ))}
                         </div>
                     )}
 
-                    <form onSubmit={sendMessage} className='message-form'>
-                        <button type='button' onClick={() => setShowEmojiPicker(!showEmojiPicker)} className='emoji-btn'>
-                            😊
+                    <form onSubmit={sendMessage} className="message-form">
+                        <button
+                            type="button"
+                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                            className="emoji-btn"
+                        >
+                            😀
                         </button>
-
-
-                        <input type='text' placeholder='type a message' value={message} onChange={handleTyping} className='message-input' maxLength={500} />
-
-                        <button type='submit' className='send-btn' disabled={!message.trim()}></button>
+                        <input
+                            type="text"
+                            placeholder="Type a message..."
+                            value={message}
+                            onChange={handleTyping}
+                            className="message-input"
+                            maxLength={500}
+                        />
+                        <button type="submit" disabled={!message.trim()} className="send-btn">
+                            Send
+                        </button>
                     </form>
-
                 </div>
-
             </div>
 
-            {Array.from(privateChats.keys()).map((otherUser) => (
-                <PrivateChat 
+            {Array.from(privateChats.keys()).map(otherUser => (
+                <PrivateChat
                     key={otherUser}
                     currentUser={username}
-                    recipientUser = {otherUser}
-                    userColor = {userColor}
-                    stompClient = {stompClient}
-                    onClose = {() => {
-                        closePrivateChat(otherUser);
-                    }}
-                    registerPrivateMessageHandler = {registerPrivateMessageHandler}
-                    unregisterPrivateMessageHandler = {unregisterPrivateMessageHandler}
+                    recipientUser={otherUser}
+                    userColor={userColor}
+                    stompClient={stompClient}
+                    onClose={() => closePrivateChat(otherUser)}
+                    registerPrivateMessageHandler={registerPrivateMessageHandler}
+                    unregisterPrivateMessageHandler={unregisterPrivateMessageHandler}
                 />
             ))}
-
         </div>
     );
-
 };
 
-export default ChatArea;
+export default ChatArea; 
+// return (
+//     <div className="chat-container">
+//         <div className="sidebar">
+//             <div className="sidebar-header">
+//                 <h3>Users</h3>
+
+//             </div>
+//             <div className="users-list">
+//                 {Array.from(onlineUsers).map(user => (
+//                     <div
+//                         key={user}
+//                         className={`user-item ${user === username ? 'current-user' : ''}`}
+//                         onClick={() => openPrivateChat(user)}
+//                     >
+//                         <div className="user-avatar" style={{ backgroundColor: user === username ? userColor : '#007bff' }}>
+//                             {user.charAt(0).toUpperCase()}
+//                         </div>
+//                         <span>{user}</span>
+//                         {user === username && <span className="you-label">(You)</span>}
+//                         {unreadMessages.has(user) && (
+//                             <span className="unread-count">{unreadMessages.get(user)}</span>
+//                         )}
+//                     </div>
+//                 ))}
+//             </div>
+//         </div>
+
+//         <div className="main-chat">
+//             <div className="chat-header">
+//                 <h2>Chat Area</h2>
+//                 <p>Welcome, {username}!</p>
+//             </div>
+
+//             <div className="messages-container">
+//                 {messages.map((msg) => (
+//                     <div key={msg.id} className={`message ${msg.type.toLowerCase()}`}>
+//                         {msg.type === 'JOIN' && (
+//                             <div className="system-message">
+//                                 {msg.sender} joined the chat
+//                             </div>
+//                         )}
+//                         {msg.type === 'LEAVE' && (
+//                             <div className="system-message">
+//                                 {msg.sender} left the chat
+//                             </div>
+//                         )}
+//                         {msg.type === 'CHAT' && (
+//                             <div className={`chat-message ${msg.sender === username ? 'own-message' : ''}`}>
+//                                 <div className="message-info">
+//                                     <span className="sender" style={{ color: msg.color || '#007bff' }}>
+//                                         {msg.sender}
+//                                     </span>
+//                                     <span className="time">{formatTime(msg.timestamp)}</span>
+//                                 </div>
+//                                 <div className="message-text">{msg.content}</div>
+//                             </div>
+//                         )}
+//                     </div>
+//                 ))}
+
+//                 {isTyping && isTyping !== username && (
+//                     <div className="typing-indicator">
+//                         {isTyping} is typing...
+//                     </div>
+//                 )}
+
+//                 <div ref={messagesEndRef} />
+//             </div>
+
+//             <div className="input-area">
+//                 {showEmojiPicker && (
+//                     <div className="emoji-picker">
+//                         {emojis.map(emoji => (
+//                             <button key={emoji} onClick={() => addEmoji(emoji)}>
+//                                 {emoji}
+//                             </button>
+//                         ))}
+//                     </div>
+//                 )}
+
+//                 <form onSubmit={sendMessage} className="message-form">
+//                     <button
+//                         type="button"
+//                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+//                         className="emoji-btn"
+//                     >
+//                         😀
+//                     </button>
+//                     <input
+//                         type="text"
+//                         placeholder="Type a message..."
+//                         value={message}
+//                         onChange={handleTyping}
+//                         className="message-input"
+//                         maxLength={500}
+//                     />
+//                     <button type="submit" disabled={!message.trim()} className="send-btn">
+//                         Send
+//                     </button>
+//                 </form>
+//             </div>
+//         </div>
+
+//         {Array.from(privateChats.keys()).map(otherUser => (
+//             <PrivateChat
+//                 key={otherUser}
+//                 currentUser={username}
+//                 recipientUser={otherUser}
+//                 userColor={userColor}
+//                 stompClient={stompClient}
+//                 onClose={() => closePrivateChat(otherUser)}
+//                 registerPrivateMessageHandler={registerPrivateMessageHandler}
+//                 unregisterPrivateMessageHandler={unregisterPrivateMessageHandler}
+//             />
+//         ))}
+//     </div>
+// );
+// };
+// export default ChatArea;

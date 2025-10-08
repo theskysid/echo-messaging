@@ -1,225 +1,226 @@
-import axios from "axios";
+import axios from 'axios';
 
-const API_URL = 'http://localhost:8080/';
 
+// Set your API base URL
+const API_URL = 'http://localhost:8080'; // Update with your Spring Boot backend URL
+
+// Create axios instance
 const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json'
-    }
+    },
+    withCredentials: true // Important for handling cookies cross-origin
 });
 
-// Add request interceptor to include JWT token
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token');
-        console.log(`🔧 Request to ${config.url} - Token:`, token ? `${token.substring(0, 20)}...` : 'null');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-            console.log(`🔧 Added Authorization header: Bearer ${token.substring(0, 20)}...`);
-        } else {
-            console.log("⚠️ No token found in localStorage");
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
-
-//response Intercepter for globval error handling 
-
+// Response interceptor for global error handling
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-
-        //gloabl error handling
-        if(error.response){
-            switch(error.response.status){
-                case 401: //unauthorized
+        // Global error handling
+        if (error.response) {
+            switch (error.response.status) {
+                case 401: // Unauthorized
+                    // Redirect to login or logout
                     authService.logout();
-                    window.location.href='/api/login'
-                    break
-                case 403: //access forbidden 
-                    console.error("Access Forbidden");
+                    window.location.href = '/login';
                     break;
-                case 404: //Resource not found
-                    console.error("Resource not found");
+                case 403: // Forbidden
+                    console.error('Access forbidden');
                     break;
-                case 500: //internal server error
-                    console.error("Internal Server error");
+                case 404: // Not Found
+                    console.error('Resource not found');
                     break;
-
+                case 500: // Internal Server Error
+                    console.error('Server error');
+                    break;
             }
-
-
-           
-            
-        } else if(error.request){
-            console.error("Request made but did not receive any response" + error.request);
+        } else if (error.request) {
+            // Request made but no response received
+            console.error('No response received', error.request);
         } else {
-            console.error("Something went wrong in setting up the request" + error.message);
+            // Something happened in setting up the request
+            console.error('Error setting up request', error.message);
         }
-        
         return Promise.reject(error);
     }
 );
 
-//generate the random color for user
 const generateUserColor = () => {
-    const colors = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'];
+    const colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
+        '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9'
+    ]
     return colors[Math.floor(Math.random() * colors.length)];
 }
 
 export const authService = {
-    login: async({username, password}) => {
-        try {
-            const response = await api.post('/api/auth/login', {username, password});
 
-            // Store JWT token and user data
-            if (response.data.token) {
-                localStorage.setItem('token', response.data.token);
-            } else {
-                // If no token, create a temporary one for demo purposes
-                localStorage.setItem('token', 'demo-token-' + Date.now());
-            }
-            
+    login: async (username, password) => {
+        try{
+
+            const response = await api.post('/auth/login', {
+                username,
+                password
+            });
+
+            //After successful login
             const userColor = generateUserColor();
             const userData = {
                 ...response.data,
                 color: userColor,
                 loginTime: new Date().toISOString()
             };
+
             localStorage.setItem('currentUser', JSON.stringify(userData));
             localStorage.setItem('user', JSON.stringify(response.data));
 
-            return {
+            return{
                 success: true,
-                data: userData
+                user: userData
             };
-        } catch (error) {
-            console.error("Login failed:", error);
-            const errorMessage = error.response?.data?.message || "Login failed. Please check your credentials.";
-            throw new Error(errorMessage);
+
+        }
+        catch(error){
+            console.error('Login failed', error);
+            const errorMessage = error.response?.data?.message || 'Login failed, Please check your credentials';
+            throw new errorMessage;
         }
     },
 
-    signup: async({username, email, password}) => {
-        try {
-            const response = await api.post('/api/auth/register', {
-                username, 
-                email, 
+    signup: async(username, email, password) => {
+        try{
+
+            const response = await api.post('/auth/signup', {
+                username,
+                email,
                 password
             });
-            
-            // Store JWT token if provided
-            if (response.data.token) {
-                localStorage.setItem('token', response.data.token);
-            } else {
-                // If no token, create a temporary one for demo purposes
-                localStorage.setItem('token', 'demo-token-' + Date.now());
-            }
-            
-            return {
+
+            return{
                 success: true,
                 user: response.data
             };
-        } catch (error) {
-             console.error("Signup failed:", error);
-            const errorMessage = error.response?.data?.message || "Signup failed. Please check your credentials.";
-            throw new Error(errorMessage);
+        }
+        catch (error){
+            console.error('Signup failed', error);
+            const errorMessage = error.response?.data?.message || 'Signup failed, Please check your credentials';
+            throw new errorMessage;
         }
     },
-    
+
     logout: async() => {
-        try {
-            await api.post('/api/auth/logout');
-        } catch (error) {
-            console.error("Logout failed:", error);
-        } finally {
-            localStorage.removeItem('token');
+        try{
+            await api.post('/auth/logout');
+        }
+        catch(error){
+            console.error('Logout failed', error);
+        }
+        finally {
             localStorage.removeItem('currentUser');
             localStorage.removeItem('user');
         }
     },
-    
+
     fetchCurrentUser: async() => {
-        try {
+        try{
             const response = await api.get('/auth/getcurrentuser');
 
             localStorage.setItem('user', JSON.stringify(response.data));
-            
             return response.data;
-        } catch (error) {
-            console.error("Fetch current user failed:", error);
-            
-            //if unauthorized, logout the user
+        }
+        catch (error){
+            console.error('Error fetching user data', error);
+
+            //if unauthorized, needs to logout
             if(error.response && error.response.status === 401){
-                authService.logout();
-                window.location.href = '/login';
+                await authService.logout();
             }
 
         }
     },
 
+    fetchOnlineUsers: async () => {
+        try {
+            const response = await api.get('/auth/getonlineusers');
+            return response.data;
+        } catch (error) {
+            console.error('Fetch online users error:', error);
+            throw error;
+        }
+    },
+
     getCurrentUser: () => {
+
         const currentUserStr = localStorage.getItem('currentUser');
         const userStr = localStorage.getItem('user');
 
-        try {
+        try{
             if(currentUserStr){
                 return JSON.parse(currentUserStr);
-            } else if(userStr){
+            }
+            else if(userStr){
                 const userData = JSON.parse(userStr);
                 const userColor = generateUserColor();
-                
-                return {
+
+                return{
                     ...userData,
-                    color: userColor,
-                    loginTime: new Date().toISOString()
+                    color: userColor
                 };
             }
-            return null;    
-        } catch (error) {
-            console.error("Error parsing user data from localStorage:", error);
+            return null
+        }
+        catch (error){
+            console.error('Error parsing user data', error);
             return null;
         }
     },
 
     isAuthenticated: () => {
-        const token = localStorage.getItem('token');
-        return !!token; //return true if token exists, else false
+        const user = localStorage.getItem('úser') || localStorage.getItem('currentUser');
+        return !!user;
     },
 
-    getToken: () => {
-        return localStorage.getItem('token');
-    },
+    fetchPrivateMessages: async(user1, user2) => {
+        try{
 
-    fetchPrivateMessages: async (user1, user2) => {
-        try {
-            const response = await api.get(`/api/messages/private?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`); 
+            const response = await api.get(`/api/messages/private?user1=${encodeURIComponent(user1)}&user2=${encodeURIComponent(user2)}`);
             return response.data;
-        } catch (error) {
-            console.error("Fetch private messages failed:", error);
+        }
+        catch(error){
+            console.error('Error in fetching private messages', error);
             throw error;
         }
     },
 
-    getOnlineUsers: async() => {
+    getOnlineUsers: async () => {
         try {
-            const token = localStorage.getItem('token');
-            console.log("🔑 Token from localStorage:", token ? `${token.substring(0, 20)}...` : 'null');
-            console.log("🌐 Making API call to /api/online-users");
-            
-            const response = await api.get('/api/online-users');
-            console.log("🌐 API Response status:", response.status);
-            console.log("🌐 API Response data:", response.data);
+            const response = await api.get('/auth/getonlineusers');
             return response.data;
         } catch (error) {
-            console.error("❌ Fetch online users failed:", error);
-            console.error("❌ Error response:", error.response?.data);
-            console.error("❌ Error status:", error.response?.status);
-            console.error("❌ Request headers:", error.config?.headers);
+            console.error('Fetch online users error:', error);
             throw error;
         }
     }
-
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
