@@ -7,14 +7,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class UserService {
 
-   @Autowired
-   UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-   public boolean userExists(String username) {
-      return userRepository.existsByUsername(username);
-   }
+    public boolean userExists(String username){
+        return userRepository.existsByUsername(username);
+    }
 
-   public void setUserOnlineStatus(String username, boolean isOnline) {
-      userRepository.updateUserOnlineStatus(username, isOnline);
-   }
+    public void setUserOnlineStatus(String username, boolean isOnline){
+        userRepository.updateUserOnlineStatus(username, isOnline);
+    }
 }

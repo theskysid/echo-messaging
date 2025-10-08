@@ -13,21 +13,22 @@ import java.util.Collections;
 @Service
 public class CustomUserDetails implements UserDetailsService {
 
-   @Autowired
-   private UserRepository userRepository;
+    @Autowired
+    private UserRepository userRepository;
 
-   @Override
-   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-      User user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("Username not found: " + username));
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
-      return org.springframework.security.core.userdetails.User.builder()  //this is the user that spring created
-              .username(user.getUsername())
-              .password(user.getPassword())
-              .authorities(Collections.emptyList())
-              .accountExpired(false)
-              .accountLocked(false)
-              .credentialsExpired(false)
-              .disabled(false)
-              .build();
-   }
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("Username not found"));
+
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getUsername())
+                .password(user.getPassword())
+                .authorities(Collections.emptyList())
+                .accountExpired(false)
+                .accountLocked(false)
+                .credentialsExpired(false)
+                .disabled(false)
+                .build();
+    }
 }

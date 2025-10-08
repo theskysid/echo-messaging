@@ -2,6 +2,7 @@ package com.theskysid.echobackend.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
 import java.time.LocalDateTime;
 
 @Data
@@ -17,7 +18,7 @@ public class ChatMessage {
 
     private String sender;
 
-    private String recepient;
+    private String recipient;
 
     private String color;
 
@@ -28,6 +29,7 @@ public class ChatMessage {
     private MessageType type;
 
     public enum MessageType {
-       CHAT, PRIVATE_MESSAGE, JOIN, LEAVE, TYPING
+        CHAT, PRIVATE_MESSAGE, JOIN, LEAVE, TYPING
     }
+
 }

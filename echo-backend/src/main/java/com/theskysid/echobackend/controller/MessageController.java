@@ -15,21 +15,15 @@ import java.util.List;
 @RequestMapping("/api/messages")
 public class MessageController {
 
-   @Autowired
-   private ChatMessageRepository chatMessageRepository;
+    @Autowired
+    private ChatMessageRepository chatMessageRepository;
 
-   @GetMapping("/private")
-   public ResponseEntity<List<ChatMessage>> getPrivateMessages(@RequestParam String user1, @RequestParam String user2) {
+    @GetMapping("/private")
+    public ResponseEntity<List<ChatMessage>> getPrivateMessages(@RequestParam String user1,
+            @RequestParam String user2) {
 
-      List<ChatMessage> messages = chatMessageRepository.findPrivateMessagesBetweenTwoUsers(user1, user2);
-      return ResponseEntity.ok(messages);
-
-   }
-
-   @GetMapping("/public")
-   public ResponseEntity<List<ChatMessage>> getPublicMessages() {
-      List<ChatMessage> messages = chatMessageRepository.findPublicMessages();
-      return ResponseEntity.ok(messages);
-   }
+        List<ChatMessage> messages = chatMessageRepository.findPrivateMessagesBetweenTwoUsers(user1, user2);
+        return ResponseEntity.ok(messages);
+    }
 
 }

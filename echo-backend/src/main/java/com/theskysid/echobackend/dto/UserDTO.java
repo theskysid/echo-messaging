@@ -1,25 +1,20 @@
-package com.theskysid.echobackend.model;
+package com.theskysid.echobackend.dto;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
 import lombok.Data;
 
-@Entity
 @Data
-@Table(name = "users")
-public class User {
+public class UserDTO {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true, nullable = false)
     private String username;
 
-    @Column(nullable = false)
-    private String password;
-
     @Column(nullable = false, unique = true)
     private String email;
+
     @Column(nullable = false, name = "is_online")
     private boolean isOnline;
+
 }

@@ -1,10 +1,9 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:echomessaging
-    driver-class-name: org.h2.Driver
-    username: sr
-    password: password
-
+    url: jdbc:h2:mem:realchatapplication
+    driverClassName: org.h2.Driver
+    username: USERNAME
+    password: PASSWORD
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
@@ -13,7 +12,6 @@ spring:
   h2:
     console:
       enabled: true
-
 jwt:
-  secret: mySecretKey1234567890123456789012345678901234567890
+  secret: FGW390@#7&Ounjkebu!#%%GHOPQasx&Q
   expiration: 3600000
