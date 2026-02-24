@@ -1,17 +1,18 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/echo}
-    driverClassName: ${DB_DRIVER:org.postgresql.Driver}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:theskysid}
+    url: jdbc:postgresql://localhost:5432/echo
+    username: theskysid
+    password: theskysid
+    driver-class-name: org.postgresql.Driver
+
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: ${JPA_HIBERNATE_DDL_AUTO:update}
-    show-sql: ${JPA_SHOW_SQL:true}
+      ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
-        format_sql: ${JPA_FORMAT_SQL:true}
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
 jwt:
   secret: FGW390@#7&Ounjkebu!#%%GHOPQasx&Q
   expiration: 3600000
