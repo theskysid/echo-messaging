@@ -69,7 +69,7 @@ public class AuthenticationService {
 
         ResponseCookie responseCookie = ResponseCookie.from("JWT", "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(false) //only for localhost... in production it should be true
                 .path("/")
                 .maxAge(0)
                 .sameSite("Strict")

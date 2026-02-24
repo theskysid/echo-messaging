@@ -11,14 +11,14 @@ const MainPage = () => {
             <div className="mainpage-content">
                 <div className="mainpage-header">
                     <div className="mainpage-icon">💬</div>
-                    <h1>Welcome to Chat Application</h1>
+                    <h1>Welcome to Echo-Messaging</h1>
                     <p>Connect with people around the world in real-time</p>
                 </div>
 
                 <div className="mainpage-features">
                     <div className="feature">
                         <div className="feature-icon">🌐</div>
-                        <h3>Real-time Messaging</h3>
+                        <h3>Echo Messaging Messaging</h3>
                         <p>Chat instantly with users online</p>
                     </div>
                     <div className="feature">

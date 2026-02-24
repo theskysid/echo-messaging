@@ -25,7 +25,7 @@ const Navbar = () =>{
         <nav className="navbar">
             <div className="navbar-container">
                 <Link to="/" className="navbar-brand">
-                    Chat Application
+                    Echo-Messaging 
                 </Link>
 
                 <div className="navbar-menu">
@@ -36,7 +36,7 @@ const Navbar = () =>{
                             </Link>
                             <div className="navbar-user">
                                 <span className="user-info">
-                                    Welcome, {currentUser.username}
+                                    Welcome, {currentUser.username }
                                 </span>
                                 <button className="logout-btn" onClick={handleLogout}>
                                     Logout
