@@ -1,43 +1,86 @@
-## Echo Messaging
+# 💬 Echo Messaging
 
-Lightweight real-time chat app (Spring Boot + React + WebSockets + JWT).
+A real-time messaging app built with Spring Boot, React, and PostgreSQL — fully containerized with Docker.
 
-### Stack
+---
 
-- Backend: Spring Boot 3 / Java 21 / H2 (in‑memory) / STOMP over SockJS
-- Frontend: React (Vite) + JWT auth
+## 🛠 Tech Stack
+
+- **Backend** → Spring Boot (Java 21) + JWT Auth + WebSocket
+- **Frontend** → React + Vite
+- **Database** → PostgreSQL 16
+- **Containerization** → Docker + Docker Compose
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) installed
+- [Docker Compose](https://docs.docker.com/compose/install/) installed
 
-- Java 21 (check with `java -version`)
-- Node.js 18+ & npm
-
-### Run (Development)
-
-Backend:
-
+### 1. Clone the repository
 ```bash
-cd echo-backend
-./mvnw spring-boot:run
+git clone https://github.com/yourusername/echo-messaging.git
+cd echo-messaging
 ```
 
-Frontend (in a second terminal):
-
+### 2. Create your `.env` file
 ```bash
-cd echo-frontend
-npm install
-npm run dev
+cp .env.example .env
+```
+Then fill in your values in `.env`
+
+### 3. Run the app
+```bash
+docker compose up --build
 ```
 
-Default URLs:
+### 4. Access the app
+- Frontend → http://localhost:5173
+- Backend → http://localhost:8080
 
-- API: http://localhost:8080
-- Frontend: shown in terminal (usually http://localhost:5173 or 5176)
-- WebSocket: ws://localhost:8080/ws
+---
 
-### Basic Flow
+## ⚙️ Environment Variables
 
-1. Register: POST /api/auth/register
-2. Login: POST /api/auth/login → receive JWT
-3. Use JWT as `Authorization: Bearer <token>` for protected endpoints & WebSocket connect headers.
-4. Public messages: subscribe `/topic/public` / send `/app/chat.sendMessage`.
+Create a `.env` file in the root directory with these variables:
+
+```env
+DB_NAME=your_db_name
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/your_db_name
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRATION=3600000
+```
+
+---
+
+## 📁 Project Structure
+
+```
+echo-messaging/
+├── docker-compose.yml
+├── .env                  # not committed (see .gitignore)
+├── .env.example          # template for others to copy
+├── echo-backend/         # Spring Boot app
+│   └── Dockerfile
+└── echo-frontend/        # React app
+    └── Dockerfile
+```
+
+---
+
+## 🧑‍💻 Development
+
+To run only the database (for IntelliJ development):
+```bash
+docker compose up -d postgres
+```
+Then run the backend from IntelliJ normally.
+
+---
+
+## 📜 License
+MIT
