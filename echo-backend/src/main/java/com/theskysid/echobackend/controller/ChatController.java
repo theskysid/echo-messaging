@@ -27,45 +27,59 @@ public class ChatController {
 
     //first the hit endpoint is checked in the config then accordingly it hits the specific methods
 
-   //like here
     @MessageMapping("/chat.addUser")
-    @SendTo("/topic/public")
+    @SendTo("/topic/public") //automatic broadcasting to all the users
     public ChatMessage addUser(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) {
 
-        if (userService.userExists(chatMessage.getSender())) {
-
-            // store username in session
-            headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
-            userService.setUserOnlineStatus(chatMessage.getSender(), true);
-
-            System.out.println("User added Successfully " + chatMessage.getSender() + " with session ID "
-                    + headerAccessor.getSessionId());
-
-            chatMessage.setTimestamp(LocalDateTime.now());
-            if (chatMessage.getContent() == null) {
-                chatMessage.setContent("");
-            }
-            return chatMessageRepository.save(chatMessage);
+        if (!userService.userExists(chatMessage.getSender())) {
+            return null;
         }
-        return null;
+
+        // Store username in WebSocket session
+        headerAccessor.getSessionAttributes()
+                      .put("username", chatMessage.getSender());
+
+        // Mark user online
+        userService.setUserOnlineStatus(chatMessage.getSender(), true);
+
+        // Set JOIN type explicitly (safety)
+        chatMessage.setType(ChatMessage.MessageType.JOIN);
+
+        // Set timestamp
+        chatMessage.setTimestamp(LocalDateTime.now());
+
+        // Ensure content not null
+        if (chatMessage.getContent() == null) {
+            chatMessage.setContent("");
+        }
+
+        // Do NOT save to DB
+        return chatMessage; // broadcast only
     }
 
     @MessageMapping("/chat.sendMessage")
     @SendTo("/topic/public")
     public ChatMessage sendMessage(@Payload ChatMessage chatMessage) {
 
-        if (userService.userExists(chatMessage.getSender())) {
-            if (chatMessage.getTimestamp() == null) {
-                chatMessage.setTimestamp(LocalDateTime.now());
-            }
+        if (!userService.userExists(chatMessage.getSender())) {
+            return null;
+        }
 
-            if (chatMessage.getContent() == null) {
-                chatMessage.setContent("");
-            }
+        if (chatMessage.getTimestamp() == null) {
+            chatMessage.setTimestamp(LocalDateTime.now());
+        }
 
+        if (chatMessage.getContent() == null) {
+            chatMessage.setContent("");
+        }
+
+        // Save only real chat messages
+        if (chatMessage.getType() == ChatMessage.MessageType.CHAT) {
             return chatMessageRepository.save(chatMessage);
         }
-        return null;
+
+        // TYPING / JOIN / LEAVE → broadcast only
+        return chatMessage;
     }
 
     @MessageMapping("/chat.sendPrivateMessage")

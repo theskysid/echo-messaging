@@ -1,18 +1,18 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/echo
-    username: theskysid
-    password: theskysid
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 jwt:
-  secret: FGW390@#7&Ounjkebu!#%%GHOPQasx&Q
-  expiration: 3600000
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
