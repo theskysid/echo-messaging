@@ -26,10 +26,16 @@ cd echo-messaging
 ```
 
 ### 2. Create your `.env` file
-```bash
-cp .env.example .env
+Create a `.env` file in the root directory and fill in your values:
+
+```env
+DB_NAME=your_db_name
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/your_db_name
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRATION=3600000
 ```
-Then fill in your values in `.env`
 
 ### 3. Run the app
 ```bash
@@ -63,7 +69,6 @@ JWT_EXPIRATION=3600000
 echo-messaging/
 ├── docker-compose.yml
 ├── .env                  # not committed (see .gitignore)
-├── .env.example          # template for others to copy
 ├── echo-backend/         # Spring Boot app
 │   └── Dockerfile
 └── echo-frontend/        # React app
