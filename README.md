@@ -21,7 +21,7 @@ A real-time messaging app built with Spring Boot, React, and PostgreSQL — full
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/echo-messaging.git
+git clone https://github.com/theskysid/echo-messaging.git
 cd echo-messaging
 ```
 
