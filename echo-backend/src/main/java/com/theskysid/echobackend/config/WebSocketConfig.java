@@ -10,12 +10,13 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-   //changes the http to websocket protocol
+   // changes the http to websocket protocol
 
    @Override
    public void configureMessageBroker(MessageBrokerRegistry config) {
 
-      // The server will SEND messages to clients using these paths.... inside the tunnel we need some highways to provide paths to each endpoints
+      // The server will SEND messages to clients using these paths.... inside the
+      // tunnel we need some highways to provide paths to each endpoints
 
       // If a message is sent to /topic or /queue or /user,
       // the broker will deliver it to whoever is subscribed.
@@ -37,14 +38,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
    @Override
    public void registerStompEndpoints(StompEndpointRegistry registry) {
 
-      // The WebSocket endpoint. The frontend connects to this URL to open the WebSocket connection.
+      // The WebSocket endpoint. The frontend connects to this URL to open the
+      // WebSocket connection.
       registry.addEndpoint("/ws")
 
-              // Only these frontend URLs are allowed to open the connection.
-              // (localhost:5173 = Vite, localhost:3000 = CRA)
-              .setAllowedOrigins("http://localhost:5173", "http://localhost:3000")
+            // Only these frontend URLs are allowed to open the connection.
+            // (localhost:5173 = Vite, localhost:3000 = CRA)
+            .setAllowedOrigins("http://localhost:5173", "http://localhost:3000", "http://35.154.154.82:5173")
 
-              // Enables SockJS fallback if WebSocket cannot connect.
-              .withSockJS();
+            // Enables SockJS fallback if WebSocket cannot connect.
+            .withSockJS();
    }
 }

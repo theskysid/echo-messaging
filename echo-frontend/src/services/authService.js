@@ -84,7 +84,7 @@ export const authService = {
         catch(error){
             console.error('Login failed', error);
             const errorMessage = error.response?.data?.message || 'Login failed, Please check your credentials';
-            throw new errorMessage;
+            throw new Error(errorMessage);  
         }
     },
 
@@ -105,7 +105,7 @@ export const authService = {
         catch (error){
             console.error('Signup failed', error);
             const errorMessage = error.response?.data?.message || 'Signup failed, Please check your credentials';
-            throw new errorMessage;
+            throw new Error(errorMessage);
         }
     },
 
