@@ -61,7 +61,7 @@ const ChatArea = () => {
                 return newSet;
             });
 
-            const socket = new SockJS('${import.meta.env.VITE_API_URL}/ws');
+            const socket = new SockJS(`${import.meta.env.VITE_API_URL}/ws`);
             stompClient.current = Stomp.over(socket);
 
             stompClient.current.connect({

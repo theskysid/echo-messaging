@@ -58,6 +58,9 @@ jobs:
             JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }}
             EOF
             cat > docker-compose.yml << 'EOF'
+            volumes:
+              postgres_data:
+
             services:
               postgres:
                 image: postgres:16
@@ -67,6 +70,8 @@ jobs:
                   POSTGRES_PASSWORD: ${DB_PASSWORD}
                 ports:
                   - "5433:5432"
+                volumes:
+                  - postgres_data:/var/lib/postgresql/data
                 healthcheck:
                   test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
                   interval: 5s
