@@ -4,7 +4,7 @@ name: Deploy Echo Messaging # name of your workflow
 on:
   push:
     branches:
-      - main
+      - fix/deploy
 
 jobs:
   deploy:
