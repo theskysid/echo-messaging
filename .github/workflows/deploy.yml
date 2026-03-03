@@ -1,4 +1,4 @@
-name: Deploy Echo Messaging  # name of your workflow
+name: Deploy Echo Messaging # name of your workflow
 
 # This workflow triggers every time you push to main branch
 on:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # GitHub runs this on a temporary Ubuntu machine
+    runs-on: ubuntu-latest # GitHub runs this on a temporary Ubuntu machine
 
     steps:
       # Step 1 - Checkout your code onto the temporary machine
@@ -37,6 +37,8 @@ jobs:
           context: ./echo-frontend
           push: true
           tags: theskysid/echo-messaging-frontend:latest
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
 
       # Step 5 - SSH into your EC2 server and deploy
       - name: Deploy to EC2
