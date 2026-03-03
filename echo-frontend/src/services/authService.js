@@ -2,7 +2,7 @@ import axios from 'axios';
 
 
 // Set your API base URL
-const API_URL = 'http://localhost:8080'; // Update with your Spring Boot backend URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'; 
 
 // Create axios instance
 const api = axios.create({
