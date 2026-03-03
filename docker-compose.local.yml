@@ -18,7 +18,7 @@ services:
       retries: 5
 
   app:
-    image: theskysid/echo-messaging-app
+    build: ./echo-backend
     ports:
       - "8080:8080"
     depends_on:
@@ -33,7 +33,7 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
 
   frontend:
-    image: theskysid/echo-messaging-frontend
+    build: ./echo-frontend
     ports:
       - "5173:80"
     depends_on:

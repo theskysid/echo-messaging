@@ -16,3 +16,5 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION}
+
+allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}

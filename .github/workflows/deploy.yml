@@ -4,7 +4,7 @@ name: Deploy Echo Messaging # name of your workflow
 on:
   push:
     branches:
-      - main
+      - fix/deploy
 
 jobs:
   deploy:
@@ -56,7 +56,10 @@ jobs:
             SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }}
+            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
             EOF
+            
+            # Write docker-compose.yml
             cat > docker-compose.yml << 'EOF'
             volumes:
               postgres_data:
@@ -89,6 +92,7 @@ jobs:
                   SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
                   JWT_SECRET: ${JWT_SECRET}
                   JWT_EXPIRATION: ${JWT_EXPIRATION}
+                  ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
               frontend:
                 image: theskysid/echo-messaging-frontend:latest
                 ports:
@@ -96,7 +100,10 @@ jobs:
                 depends_on:
                   - app
             EOF
-            docker pull theskysid/echo-messaging-app:latest
-            docker pull theskysid/echo-messaging-frontend:latest
+            # Deploy
             docker-compose down
+            docker-compose pull
             docker-compose up -d
+            
+            # Cleanup .env
+            rm .env
