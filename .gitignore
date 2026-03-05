@@ -32,3 +32,4 @@ Thumbs.db
 # Keep Dockerfile and docker-compose.yml tracked
 # but ignore override files
 docker-compose.override.yml
+docker-compose.local.yml
