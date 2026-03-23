@@ -1,12 +1,12 @@
-package com.theskysid.echobackend.controller;
+package com.theskysid.echobackend.auth.controller;
 
-import com.theskysid.echobackend.dto.LoginRequestDTO;
-import com.theskysid.echobackend.dto.LoginResponseDTO;
-import com.theskysid.echobackend.dto.RegisterRequestDTO;
-import com.theskysid.echobackend.dto.UserDTO;
-import com.theskysid.echobackend.model.User;
-import com.theskysid.echobackend.repository.UserRepository;
-import com.theskysid.echobackend.service.AuthenticationService;
+import com.theskysid.echobackend.auth.dto.LoginRequestDTO;
+import com.theskysid.echobackend.auth.dto.LoginResponseDTO;
+import com.theskysid.echobackend.auth.dto.RegisterRequestDTO;
+import com.theskysid.echobackend.user.dto.UserDTO;
+import com.theskysid.echobackend.user.entity.User;
+import com.theskysid.echobackend.user.repository.UserRepository;
+import com.theskysid.echobackend.auth.service.AuthenticationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

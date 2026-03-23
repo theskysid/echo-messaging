@@ -1,6 +1,6 @@
-package com.theskysid.echobackend.repository;
+package com.theskysid.echobackend.messaging.repository;
 
-import com.theskysid.echobackend.model.ChatMessage;
+import com.theskysid.echobackend.messaging.entity.ChatMessage;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

@@ -1,6 +1,6 @@
-package com.theskysid.echobackend.repository;
+package com.theskysid.echobackend.user.repository;
 
-import com.theskysid.echobackend.model.User;
+import com.theskysid.echobackend.user.entity.User;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

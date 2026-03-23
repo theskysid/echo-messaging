@@ -1,7 +1,7 @@
-package com.theskysid.echobackend.listener;
+package com.theskysid.echobackend.messaging.websocket;
 
-import com.theskysid.echobackend.model.ChatMessage;
-import com.theskysid.echobackend.service.UserService;
+import com.theskysid.echobackend.messaging.entity.ChatMessage;
+import com.theskysid.echobackend.user.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
