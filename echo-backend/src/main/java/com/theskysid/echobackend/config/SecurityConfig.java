@@ -1,7 +1,7 @@
 package com.theskysid.echobackend.config;
 
-import com.theskysid.echobackend.jwt.JwtAuthenticationFilter;
-import com.theskysid.echobackend.service.CustomUserDetails;
+import com.theskysid.echobackend.auth.jwt.JwtAuthenticationFilter;
+import com.theskysid.echobackend.user.service.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

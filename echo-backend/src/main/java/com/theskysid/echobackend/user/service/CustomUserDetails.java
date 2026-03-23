@@ -1,7 +1,7 @@
-package com.theskysid.echobackend.service;
+package com.theskysid.echobackend.user.service;
 
-import com.theskysid.echobackend.model.User;
-import com.theskysid.echobackend.repository.UserRepository;
+import com.theskysid.echobackend.user.entity.User;
+import com.theskysid.echobackend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

@@ -1,5 +1,6 @@
-package com.theskysid.echobackend.dto;
+package com.theskysid.echobackend.auth.dto;
 
+import com.theskysid.echobackend.user.dto.UserDTO;
 import lombok.Builder;
 import lombok.Data;
 

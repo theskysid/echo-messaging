@@ -1,6 +1,6 @@
-package com.theskysid.echobackend.jwt;
+package com.theskysid.echobackend.auth.jwt;
 
-import com.theskysid.echobackend.model.User;
+import com.theskysid.echobackend.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

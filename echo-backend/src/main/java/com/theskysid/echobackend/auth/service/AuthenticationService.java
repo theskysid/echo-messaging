@@ -1,12 +1,12 @@
-package com.theskysid.echobackend.service;
+package com.theskysid.echobackend.auth.service;
 
-import com.theskysid.echobackend.dto.LoginRequestDTO;
-import com.theskysid.echobackend.dto.LoginResponseDTO;
-import com.theskysid.echobackend.dto.RegisterRequestDTO;
-import com.theskysid.echobackend.dto.UserDTO;
-import com.theskysid.echobackend.jwt.JwtService;
-import com.theskysid.echobackend.model.User;
-import com.theskysid.echobackend.repository.UserRepository;
+import com.theskysid.echobackend.auth.dto.LoginRequestDTO;
+import com.theskysid.echobackend.auth.dto.LoginResponseDTO;
+import com.theskysid.echobackend.auth.dto.RegisterRequestDTO;
+import com.theskysid.echobackend.user.dto.UserDTO;
+import com.theskysid.echobackend.auth.jwt.JwtService;
+import com.theskysid.echobackend.user.entity.User;
+import com.theskysid.echobackend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -16,7 +16,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;

@@ -1,8 +1,8 @@
-package com.theskysid.echobackend.controller;
+package com.theskysid.echobackend.messaging.controller;
 
-import com.theskysid.echobackend.model.ChatMessage;
-import com.theskysid.echobackend.repository.ChatMessageRepository;
-import com.theskysid.echobackend.service.UserService;
+import com.theskysid.echobackend.messaging.entity.ChatMessage;
+import com.theskysid.echobackend.messaging.repository.ChatMessageRepository;
+import com.theskysid.echobackend.user.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;

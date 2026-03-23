@@ -1,4 +1,4 @@
-package com.theskysid.echobackend.model;
+package com.theskysid.echobackend.user.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;

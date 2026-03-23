@@ -1,4 +1,4 @@
-package com.theskysid.echobackend.dto;
+package com.theskysid.echobackend.user.dto;
 
 import jakarta.persistence.Column;
 import lombok.Data;
