@@ -1,4 +1,5 @@
 # Environment variables - NEVER commit these
+echo-backend/.env
 .env
 *.env
 .env.*

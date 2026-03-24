@@ -39,8 +39,6 @@ public class ChatController {
         headerAccessor.getSessionAttributes()
                       .put("username", chatMessage.getSender());
 
-        // Mark user online
-        userService.setUserOnlineStatus(chatMessage.getSender(), true);
 
         // Set JOIN type explicitly (safety)
         chatMessage.setType(ChatMessage.MessageType.JOIN);

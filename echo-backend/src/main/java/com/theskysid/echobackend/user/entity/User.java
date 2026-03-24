@@ -1,10 +1,15 @@
 package com.theskysid.echobackend.user.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 @Entity
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "users")
 public class User {
 
@@ -15,11 +20,27 @@ public class User {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String email;
-    @Column(nullable = false, name = "is_online")
-    private boolean isOnline;
+
+    @Column(unique = true)
+    private String phone;
+
+    @Column(name = "google_id", unique = true)
+    private String googleId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AuthProvider authProvider;
+
+    @Column(name = "registered_at", nullable = false, updatable = false)
+    private LocalDateTime registeredAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.registeredAt = LocalDateTime.now();
+    }
 }

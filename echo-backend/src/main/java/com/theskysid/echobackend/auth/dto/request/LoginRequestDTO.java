@@ -1,4 +1,4 @@
-package com.theskysid.echobackend.auth.dto;
+package com.theskysid.echobackend.auth.dto.request;
 
 import lombok.Data;
 

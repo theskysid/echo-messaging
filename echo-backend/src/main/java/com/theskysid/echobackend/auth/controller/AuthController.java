@@ -1,8 +1,8 @@
 package com.theskysid.echobackend.auth.controller;
 
-import com.theskysid.echobackend.auth.dto.LoginRequestDTO;
-import com.theskysid.echobackend.auth.dto.LoginResponseDTO;
-import com.theskysid.echobackend.auth.dto.RegisterRequestDTO;
+import com.theskysid.echobackend.auth.dto.request.LoginRequestDTO;
+import com.theskysid.echobackend.auth.dto.request.RegisterRequestDTO;
+import com.theskysid.echobackend.auth.dto.response.LoginResponseDTO;
 import com.theskysid.echobackend.user.dto.UserDTO;
 import com.theskysid.echobackend.user.entity.User;
 import com.theskysid.echobackend.user.repository.UserRepository;
@@ -34,20 +34,17 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<UserDTO> login(@RequestBody LoginRequestDTO loginRequestDTO) {
-
         LoginResponseDTO loginResponseDTO = authenticationService.login(loginRequestDTO);
         ResponseCookie responseCookie = ResponseCookie.from("JWT", loginResponseDTO.getToken())
                 .httpOnly(true)
                 .secure(true)
                 .path("/")
-                .maxAge(1 * 60 * 60) // 1 Hour
+                .maxAge(60 * 60)
                 .sameSite("strict")
                 .build();
-
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
                 .body(loginResponseDTO.getUserDTO());
-
     }
 
     @PostMapping("/logout")
@@ -62,23 +59,19 @@ public class AuthController {
 
     @GetMapping("/getcurrentuser")
     public ResponseEntity<?> getCurrentUser(Authentication authentication) {
-
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("USER NOT AUTHORIZED");
         }
-
-        String username = authentication.getName();
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
-
+        User user = userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(convertToUserDTO(user));
     }
 
-    public UserDTO convertToUserDTO(User user) {
-        UserDTO userDTO = new UserDTO();
-        userDTO.setEmail(user.getEmail());
-        userDTO.setUsername(user.getUsername());
-        userDTO.setEmail(user.getEmail());
-
-        return userDTO;
+    private UserDTO convertToUserDTO(User user) {
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        return dto;
     }
 }

@@ -1,4 +1,4 @@
-package com.theskysid.echobackend.auth.dto;
+package com.theskysid.echobackend.auth.dto.response;
 
 import com.theskysid.echobackend.user.dto.UserDTO;
 import lombok.Builder;

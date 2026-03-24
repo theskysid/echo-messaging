@@ -201,6 +201,100 @@ export const authService = {
             console.error('Fetch online users error:', error);
             throw error;
         }
+    },
+
+    // ── Email OTP ──────────────────────────────────────────
+
+    sendEmailOtp: async (email) => {
+        try {
+            const response = await api.post('/auth/email-otp/send', { email });
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            console.error('Send email OTP failed', error);
+            const errorMessage = error.response?.data?.error || 'Failed to send OTP. Please try again.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    verifyEmailOtp: async (email, otp) => {
+        try {
+            const response = await api.post('/auth/email-otp/verify', { email, otp });
+
+            const userColor = generateUserColor();
+            const userData = {
+                ...response.data,
+                color: userColor,
+                loginTime: new Date().toISOString()
+            };
+
+            localStorage.setItem('currentUser', JSON.stringify(userData));
+            localStorage.setItem('user', JSON.stringify(response.data));
+
+            return { success: true, user: userData };
+        } catch (error) {
+            console.error('Verify email OTP failed', error);
+            const errorMessage = error.response?.data?.error || 'OTP verification failed.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    // ── Phone OTP ──────────────────────────────────────────
+
+    sendPhoneOtp: async (phone) => {
+        try {
+            const response = await api.post('/auth/phone-otp/send', { phone });
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            console.error('Send phone OTP failed', error);
+            const errorMessage = error.response?.data?.error || 'Failed to send OTP. Please try again.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    verifyPhoneOtp: async (phone, otp) => {
+        try {
+            const response = await api.post('/auth/phone-otp/verify', { phone, otp });
+
+            const userColor = generateUserColor();
+            const userData = {
+                ...response.data,
+                color: userColor,
+                loginTime: new Date().toISOString()
+            };
+
+            localStorage.setItem('currentUser', JSON.stringify(userData));
+            localStorage.setItem('user', JSON.stringify(response.data));
+
+            return { success: true, user: userData };
+        } catch (error) {
+            console.error('Verify phone OTP failed', error);
+            const errorMessage = error.response?.data?.error || 'OTP verification failed.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    // ── Google OAuth ───────────────────────────────────────
+
+    googleLogin: async (idToken) => {
+        try {
+            const response = await api.post('/auth/google/login', { idToken });
+
+            const userColor = generateUserColor();
+            const userData = {
+                ...response.data,
+                color: userColor,
+                loginTime: new Date().toISOString()
+            };
+
+            localStorage.setItem('currentUser', JSON.stringify(userData));
+            localStorage.setItem('user', JSON.stringify(response.data));
+
+            return { success: true, user: userData };
+        } catch (error) {
+            console.error('Google login failed', error);
+            const errorMessage = error.response?.data?.error || 'Google authentication failed.';
+            throw new Error(errorMessage);
+        }
     }
 }
 

@@ -1,13 +1,15 @@
 package com.theskysid.echobackend.auth.service;
 
-import com.theskysid.echobackend.auth.dto.LoginRequestDTO;
-import com.theskysid.echobackend.auth.dto.LoginResponseDTO;
-import com.theskysid.echobackend.auth.dto.RegisterRequestDTO;
+import com.theskysid.echobackend.auth.dto.request.LoginRequestDTO;
+import com.theskysid.echobackend.auth.dto.request.RegisterRequestDTO;
+import com.theskysid.echobackend.auth.dto.response.LoginResponseDTO;
 import com.theskysid.echobackend.user.dto.UserDTO;
 import com.theskysid.echobackend.auth.jwt.JwtService;
+import com.theskysid.echobackend.user.entity.AuthProvider;
 import com.theskysid.echobackend.user.entity.User;
 import com.theskysid.echobackend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -16,9 +18,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 public class AuthenticationService {
@@ -35,61 +36,66 @@ public class AuthenticationService {
     @Autowired
     private JwtService jwtService;
 
-    public UserDTO signup(RegisterRequestDTO  registerRequestDTO) {
-        if(userRepository.findByUsername(registerRequestDTO.getUsername()).isPresent()){
+    @Autowired
+    private OnlineUserService onlineUserService;
+
+    @Value("${app.secure-cookie:true}")
+    private boolean secureCookie;
+
+    public UserDTO signup(RegisterRequestDTO registerRequestDTO) {
+        if (userRepository.findByUsername(registerRequestDTO.getUsername()).isPresent()) {
             throw new RuntimeException("Username is already in use");
         }
-
         User user = new User();
         user.setUsername(registerRequestDTO.getUsername());
-        user.setPassword(passwordEncoder.encode((registerRequestDTO.getPassword())));
+        user.setPassword(passwordEncoder.encode(registerRequestDTO.getPassword()));
         user.setEmail(registerRequestDTO.getEmail());
-
-        User savedUser = userRepository.save(user);
-        return convertToUserDTO(user);
+        user.setAuthProvider(AuthProvider.EMAIL);
+        return convertToUserDTO(userRepository.save(user));
     }
 
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        loginRequestDTO.getUsername(), loginRequestDTO.getPassword()));
 
         User user = userRepository.findByUsername(loginRequestDTO.getUsername())
-                .orElseThrow(() -> new RuntimeException("Username not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequestDTO.getUsername(), loginRequestDTO.getPassword()));
-
-        String jwtToken = jwtService.generateToken(user);
+        onlineUserService.markOnline(user.getId());
 
         return LoginResponseDTO.builder()
-                .token(jwtToken)
+                .token(jwtService.generateToken(user))
                 .userDTO(convertToUserDTO(user))
                 .build();
     }
 
-    public ResponseEntity<String> logout(){
-
-        ResponseCookie responseCookie = ResponseCookie.from("JWT", "")
+    public ResponseEntity<String> logout() {
+        ResponseCookie cookie = ResponseCookie.from("JWT", "")
                 .httpOnly(true)
-                .secure(false) //only for localhost... in production it should be true
+                .secure(secureCookie)
                 .path("/")
                 .maxAge(0)
                 .sameSite("Strict")
                 .build();
-
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, responseCookie.toString())
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .body("Logged out successfully");
     }
 
-    public Map<String , Object> getOnlineUsers(){
-        List<User> usersList = userRepository.findByIsOnlineTrue();
-        Map<String , Object> onlineUsers = usersList.stream().collect(Collectors.toMap(User::getUsername, user -> user));
-        return onlineUsers;
+    public Map<String, Object> getOnlineUsers() {
+        Set<Long> onlineIds = onlineUserService.getOnlineUserIds();
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("onlineUserIds", onlineIds);
+        result.put("count", onlineIds.size());
+        return result;
     }
 
-    public UserDTO convertToUserDTO(User user){
-        UserDTO userDTO = new UserDTO();
-        userDTO.setEmail(user.getEmail());
-        userDTO.setUsername(user.getUsername());
-        userDTO.setId(user.getId());
-
-        return userDTO;
+    public UserDTO convertToUserDTO(User user) {
+        UserDTO dto = new UserDTO();
+        dto.setId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setEmail(user.getEmail());
+        return dto;
     }
 }
