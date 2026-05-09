@@ -41,12 +41,11 @@ public class SecurityConfig {
                 .headers(header -> header.frameOptions(frameOption -> frameOption.disable()))
                 .cors(cors -> cors.configurationSource(addConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/auth/**",
-                                "/h2-console/**",
-                                "/api/**",
-                                "/ws/**")
-                        .permitAll()
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/api/**").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
