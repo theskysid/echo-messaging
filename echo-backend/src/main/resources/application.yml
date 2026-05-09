@@ -34,3 +34,11 @@ logging:
     org.springframework.messaging: WARN
     org.springframework.boot.autoconfigure: ERROR
     org.springframework.orm.jpa: ERROR
+
+management:
+  endpoint:
+    web:
+      exposure:
+        include: health
+    health:
+      show-details: always
