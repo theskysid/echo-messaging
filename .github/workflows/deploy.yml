@@ -57,6 +57,14 @@ jobs:
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }}
             ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID}}
+            TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN}}
+            TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER}}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID}}
+            MAIL_HOST=${{ secrets.MAIL_HOST}}
+            MAIL_PORT=${{ secrets.MAIL_PORT}}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME}}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD}}
             EOF
             
             # Write docker-compose.yml
@@ -93,6 +101,14 @@ jobs:
                   JWT_SECRET: ${JWT_SECRET}
                   JWT_EXPIRATION: ${JWT_EXPIRATION}
                   ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+                  TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+                  TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+                  TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+                  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+                  MAIL_HOST: ${MAIL_HOST}
+                  MAIL_PORT: ${MAIL_PORT}
+                  MAIL_USERNAME: ${MAIL_USERNAME}
+                  MAIL_PASSWORD: ${MAIL_PASSWORD}
               frontend:
                 image: theskysid/echo-messaging-frontend:latest
                 ports:
