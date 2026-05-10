@@ -4,7 +4,9 @@ COPY package*.json .
 RUN npm install
 COPY . .
 ARG VITE_API_URL
-RUN echo "VITE_API_URL=$VITE_API_URL" > .env.production
+ARG VITE_GOOGLE_CLIENT_ID
+RUN echo "VITE_API_URL=$VITE_API_URL" > .env.production && \
+    echo "VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID" >> .env.production
 RUN npm run build
 
 FROM nginx:alpine

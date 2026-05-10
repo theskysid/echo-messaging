@@ -4,6 +4,8 @@ volumes:
 services:
   postgres:
     image: postgres:16
+    env_file:
+      - ./.env
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
@@ -13,24 +15,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
       interval: 5s
       retries: 5
 
   app:
     build: ./echo-backend
+    env_file:
+      - ./.env
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION: ${JWT_EXPIRATION}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
       interval: 30s
@@ -39,7 +36,13 @@ services:
       start_period: 40s
 
   frontend:
-    build: ./echo-frontend
+    build:
+      context: ./echo-frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+    env_file:
+      - ./.env
     ports:
       - "5173:80"
     depends_on:
