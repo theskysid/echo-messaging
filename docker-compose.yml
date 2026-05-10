@@ -1,3 +1,4 @@
+#this is just a sample what is copied in the deploy.yml ... this is not used anywhere.
 volumes:
   postgres_data:
 
