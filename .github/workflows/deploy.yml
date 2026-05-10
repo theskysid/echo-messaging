@@ -39,6 +39,7 @@ jobs:
           tags: theskysid/echo-messaging-frontend:latest
           build-args: |
             VITE_API_URL=${{ secrets.VITE_API_URL }}
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
 
       # Step 5 - SSH into your EC2 server and deploy
       - name: Deploy to EC2
@@ -48,76 +49,45 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~
+            # Go to project directory
+            cd ~/echo-messaging
+
+            # Pull latest repository changes
+            git pull origin main
+
+            # Create production .env
             cat > .env << EOF
             DB_NAME=${{ secrets.DB_NAME }}
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
             SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
+
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }}
-            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
-            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID}}
-            TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN}}
-            TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER}}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID}}
-            MAIL_HOST=${{ secrets.MAIL_HOST}}
-            MAIL_PORT=${{ secrets.MAIL_PORT}}
-            MAIL_USERNAME=${{ secrets.MAIL_USERNAME}}
-            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD}}
-            EOF
-            
-            # Write docker-compose.yml
-            cat > docker-compose.yml << 'EOF'
-            volumes:
-              postgres_data:
 
-            services:
-              postgres:
-                image: postgres:16
-                environment:
-                  POSTGRES_DB: ${DB_NAME}
-                  POSTGRES_USER: ${DB_USER}
-                  POSTGRES_PASSWORD: ${DB_PASSWORD}
-                ports:
-                  - "5433:5432"
-                volumes:
-                  - postgres_data:/var/lib/postgresql/data
-                healthcheck:
-                  test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-                  interval: 5s
-                  retries: 5
-              app:
-                image: theskysid/echo-messaging-app:latest
-                ports:
-                  - "8080:8080"
-                depends_on:
-                  postgres:
-                    condition: service_healthy
-                environment:
-                  SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-                  SPRING_DATASOURCE_USERNAME: ${DB_USER}
-                  SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-                  JWT_SECRET: ${JWT_SECRET}
-                  JWT_EXPIRATION: ${JWT_EXPIRATION}
-                  ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-                  TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
-                  TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
-                  TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
-                  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-                  MAIL_HOST: ${MAIL_HOST}
-                  MAIL_PORT: ${MAIL_PORT}
-                  MAIL_USERNAME: ${MAIL_USERNAME}
-                  MAIL_PASSWORD: ${MAIL_PASSWORD}
-              frontend:
-                image: theskysid/echo-messaging-frontend:latest
-                ports:
-                  - "5173:80"
-                depends_on:
-                  - app
+            ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+
+            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
+            TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}
+            TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}
+
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+
+            MAIL_HOST=${{ secrets.MAIL_HOST }}
+            MAIL_PORT=${{ secrets.MAIL_PORT }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
             EOF
-            # Deploy
-            docker-compose down
-            docker-compose pull
-            docker-compose up -d
+
+            # Pull latest Docker images
+            docker compose pull
+
+            # Restart containers
+            docker compose up -d
+            
+            # Prune old unused Docker images
+            docker image prune -af
+            
+            
             
