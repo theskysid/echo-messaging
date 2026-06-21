@@ -58,7 +58,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           timeout: 2m
           command_timeout: 15m
-          script: &staging_deploy_script |
+          script: |
             cd ~/echo-messaging
             git fetch origin
             git checkout staging
@@ -101,7 +101,38 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           timeout: 2m
           command_timeout: 15m
-          script: *staging_deploy_script
+          script: |
+            cd ~/echo-messaging
+            git fetch origin
+            git checkout staging
+            git pull origin staging
+
+            # 🔐 FINOPS: Create isolated Staging Environment file
+            cat > .env.staging << EOF
+            # === STRICTLY ISOLATED (Blast Radius) ===
+            DB_NAME=${{ secrets.STAGING_DB_NAME }}
+            DB_USER=${{ secrets.STAGING_DB_USER }}
+            DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}
+            SPRING_DATASOURCE_URL=${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
+            JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}
+            
+            # === SAFELY SHARED (Configuration & 3rd Party) ===
+            JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }}
+            ALLOWED_ORIGINS=*
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
+            TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}
+            TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}
+            MAIL_HOST=${{ secrets.MAIL_HOST }}
+            MAIL_PORT=${{ secrets.MAIL_PORT }}
+            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
+            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            EOF
+
+            # 📦 Use the staging compose file
+            docker compose -f docker-compose.staging.yml pull
+            docker compose -f docker-compose.staging.yml up -d
+            docker image prune -af
 
       # --- 🌍 PRODUCTION DEPLOYMENT ---
       - name: Deploy to EC2 (PRODUCTION)
