@@ -1,0 +1,50 @@
+volumes:
+  postgres_data_staging: # 🛡️ BLAST RADIUS: Entirely separate volume from production
+
+services:
+  postgres-staging:
+    image: postgres:16
+    container_name: echo-postgres-staging # 🏷️ Unique Name
+    restart: unless-stopped
+    env_file:
+      - ./.env.staging # 🔐 FINOPS: We use a different env file for test credentials
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5434:5432" # 🔌 PORT SHIFT: Shifted from 5433 to 5434
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      interval: 5s
+      retries: 5
+      timeout: 5s
+
+  app-staging:
+    image: theskysid/echo-messaging-app:staging # 📦 TAG SHIFT: Notice this says 'staging', not 'latest'
+    container_name: echo-backend-staging
+    restart: unless-stopped
+    env_file:
+      - ./.env.staging
+    ports:
+      - "8081:8080" # 🔌 PORT SHIFT: Shifted from 8080 to 8081
+    depends_on:
+      postgres-staging:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  frontend-staging:
+    image: theskysid/echo-messaging-frontend:staging # 📦 TAG SHIFT: Uses 'staging' tag
+    container_name: echo-frontend-staging
+    restart: unless-stopped
+    ports:
+      - "5174:80" # 🔌 PORT SHIFT: Shifted from 5173 to 5174
+    depends_on:
+      - app-staging
