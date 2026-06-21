@@ -7,12 +7,15 @@ on:
       - staging
 
 jobs:
-  deploy:
+  # ==========================================
+  # 🏗️ BUILD PHASE
+  # ==========================================
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -20,56 +23,64 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # ==========================================
-      # 🏗️ BUILD PHASE (Dynamic Tagging)
-      # ==========================================
+      # Dynamically assign the tag: 'latest' for main, 'staging' for staging
+      - name: Set image tag
+        id: tag
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "TAG=latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG=staging" >> "$GITHUB_OUTPUT"
+          fi
 
-      #dynamically assign the tag: 'latest' for main, 'staging' for staging
       - name: Build and push backend
         uses: docker/build-push-action@v5
         with:
           context: ./echo-backend
           push: true
-          tags: theskysid/echo-messaging-app:${{ github.ref == 'refs/heads/main' && 'latest' || 'staging' }}
+          tags: theskysid/echo-messaging-app:${{ steps.tag.outputs.TAG }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v5
         with:
           context: ./echo-frontend
           push: true
-          tags: theskysid/echo-messaging-frontend:${{ github.ref == 'refs/heads/main' && 'latest' || 'staging' }}
+          tags: theskysid/echo-messaging-frontend:${{ steps.tag.outputs.TAG }}
           build-args: |
             VITE_API_URL=${{ github.ref == 'refs/heads/main' && secrets.VITE_API_URL || secrets.STAGING_VITE_API_URL }}
             VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}
 
-      # ==========================================
-      # 🚀 DEPLOYMENT PHASE (Blast Radius Isolated)
-      # ==========================================
+  # ==========================================
+  # 🧪 STAGING DEPLOYMENT
+  # ==========================================
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/staging'
+    environment: staging
 
-      # --- 🧪 STAGING DEPLOYMENT ---
-      - name: Deploy to EC2 (STAGING)
-        if: github.ref == 'refs/heads/staging' # 🚦 Only runs if pushed to staging
+    steps:
+      - name: Deploy to Staging EC2
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USER }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
           script: |
-            cd ~/echo-messaging
+            set -e
+
+            cd ~/apps/echo-messaging
             git fetch origin
             git checkout staging
             git pull origin staging
 
-            # 🔐 FINOPS: Create isolated Staging Environment file
-            cat > .env.staging << EOF
-            # === STRICTLY ISOLATED (Blast Radius) ===
+            # 🔐 Create isolated staging environment file
+            cat > .env.staging << 'ENVEOF'
             DB_NAME=${{ secrets.STAGING_DB_NAME }}
             DB_USER=${{ secrets.STAGING_DB_USER }}
             DB_PASSWORD=${{ secrets.STAGING_DB_PASSWORD }}
             SPRING_DATASOURCE_URL=${{ secrets.STAGING_SPRING_DATASOURCE_URL }}
             JWT_SECRET=${{ secrets.STAGING_JWT_SECRET }}
-            
-            # === SAFELY SHARED (Configuration & 3rd Party) ===
             JWT_EXPIRATION=${{ secrets.JWT_EXPIRATION }}
             ALLOWED_ORIGINS=*
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
@@ -80,29 +91,56 @@ jobs:
             MAIL_PORT=${{ secrets.MAIL_PORT }}
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
-            EOF
+            ENVEOF
 
-            # 📦 Use the staging compose file
-            docker compose -f docker-compose.staging.yml pull
-            docker compose -f docker-compose.staging.yml up -d
+            # 📦 Pull new images and recreate containers
+            docker compose -f docker-compose.staging.yml --env-file .env.staging pull
+            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --force-recreate
             docker image prune -f
 
-      # --- 🌍 PRODUCTION DEPLOYMENT ---
-      - name: Deploy to EC2 (PRODUCTION)
-        if: github.ref == 'refs/heads/main' # 🚦 Only runs if pushed to main
+      - name: Verify staging deployment
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USER }}
+          key: ${{ secrets.STAGING_EC2_SSH_KEY }}
           script: |
-            cd ~/echo-messaging
+            echo "⏳ Waiting for staging backend to start..."
+            sleep 45
+            if curl -sf http://localhost:8081/actuator/health > /dev/null 2>&1; then
+              echo "✅ Staging backend is healthy"
+            else
+              echo "❌ Staging backend health check failed"
+              docker logs echo-backend-staging --tail 50
+              exit 1
+            fi
+
+  # ==========================================
+  # 🌍 PRODUCTION DEPLOYMENT
+  # ==========================================
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Deploy to Production EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USER }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          script: |
+            set -e
+
+            cd ~/apps/echo-messaging
             git fetch origin
             git checkout main
             git pull origin main
 
-            # 🔐 Production Environment file
-            cat > .env << EOF
+            # 🔐 Create production environment file
+            cat > .env << 'ENVEOF'
             DB_NAME=${{ secrets.DB_NAME }}
             DB_USER=${{ secrets.DB_USER }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
@@ -118,9 +156,26 @@ jobs:
             MAIL_PORT=${{ secrets.MAIL_PORT }}
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
-            EOF
+            ENVEOF
 
-            # 📦 Use the production compose file
-            docker compose -f docker-compose.yml pull
-            docker compose -f docker-compose.yml up -d
+            # 📦 Pull new images and recreate containers
+            docker compose -f docker-compose.yml --env-file .env pull
+            docker compose -f docker-compose.yml --env-file .env up -d --force-recreate
             docker image prune -f
+
+      - name: Verify production deployment
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USER }}
+          key: ${{ secrets.PROD_EC2_SSH_KEY }}
+          script: |
+            echo "⏳ Waiting for production backend to start..."
+            sleep 45
+            if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+              echo "✅ Production backend is healthy"
+            else
+              echo "❌ Production backend health check failed"
+              docker logs echo-backend --tail 50
+              exit 1
+            fi
