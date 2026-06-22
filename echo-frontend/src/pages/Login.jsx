@@ -8,8 +8,7 @@ const Login = () => {
   const [activeTab, setActiveTab] = useState("password");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [otp, setOtp] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -36,8 +35,7 @@ const Login = () => {
     resetFields();
     setUsername("");
     setPassword("");
-    setEmail("");
-    setPhone("");
+    setIdentifier("");
   };
 
   // ── Password Login ───────────────────────────────────────
@@ -58,16 +56,16 @@ const Login = () => {
     }
   };
 
-  // ── Email OTP ────────────────────────────────────────────
-  const handleSendEmailOtp = async (e) => {
+  // ── OTP Login ─────────────────────────────────────────────
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     setMessage("");
     setIsLoading(true);
     try {
-      await authService.sendEmailOtp(email);
+      await authService.sendOtp(identifier);
       setOtpSent(true);
       setCountdown(60);
-      setMessage("OTP sent to your email!");
+      setMessage("OTP sent successfully!");
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -75,46 +73,12 @@ const Login = () => {
     }
   };
 
-  const handleVerifyEmailOtp = async (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setMessage("");
     setIsLoading(true);
     try {
-      const result = await authService.verifyEmailOtp(email, otp);
-      if (result.success) {
-        setMessage("Login successful!");
-        setTimeout(() => navigate("/chatarea"), 1500);
-      }
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ── Phone OTP ────────────────────────────────────────────
-  const handleSendPhoneOtp = async (e) => {
-    e.preventDefault();
-    setMessage("");
-    setIsLoading(true);
-    try {
-      await authService.sendPhoneOtp(phone);
-      setOtpSent(true);
-      setCountdown(60);
-      setMessage("OTP sent to your phone!");
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyPhoneOtp = async (e) => {
-    e.preventDefault();
-    setMessage("");
-    setIsLoading(true);
-    try {
-      const result = await authService.verifyPhoneOtp(phone, otp);
+      const result = await authService.verifyOtp(identifier, otp);
       if (result.success) {
         setMessage("Login successful!");
         setTimeout(() => navigate("/chatarea"), 1500);

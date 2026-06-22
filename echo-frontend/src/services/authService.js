@@ -54,6 +54,9 @@ const generateUserColor = () => {
     return colors[Math.floor(Math.random() * colors.length)];
 }
 
+const isEmailIdentifier = (identifier) => identifier?.includes('@');
+const normalizeIdentifier = (identifier) => identifier?.trim();
+
 export const authService = {
 
     login: async (username, password) => {
@@ -140,15 +143,7 @@ export const authService = {
         }
     },
 
-    fetchOnlineUsers: async () => {
-        try {
-            const response = await api.get('/auth/getonlineusers');
-            return response.data;
-        } catch (error) {
-            console.error('Fetch online users error:', error);
-            throw error;
-        }
-    },
+
 
     getCurrentUser: () => {
 
@@ -177,8 +172,28 @@ export const authService = {
     },
 
     isAuthenticated: () => {
-        const user = localStorage.getItem('úser') || localStorage.getItem('currentUser');
+        const user = localStorage.getItem('user') || localStorage.getItem('currentUser');
         return !!user;
+    },
+
+    sendOtp: async (identifier) => {
+        const value = normalizeIdentifier(identifier);
+        if (!value) {
+            throw new Error('Email or phone is required');
+        }
+        return isEmailIdentifier(value)
+            ? authService.sendEmailOtp(value)
+            : authService.sendPhoneOtp(value);
+    },
+
+    verifyOtp: async (identifier, otp) => {
+        const value = normalizeIdentifier(identifier);
+        if (!value) {
+            throw new Error('Email or phone is required');
+        }
+        return isEmailIdentifier(value)
+            ? authService.verifyEmailOtp(value, otp)
+            : authService.verifyPhoneOtp(value, otp);
     },
 
     fetchPrivateMessages: async(user1, user2) => {
@@ -273,6 +288,35 @@ export const authService = {
         }
     },
 
+    sendSignupOtp: async (identifier) => authService.sendOtp(identifier),
+
+    verifySignupOtp: async ({ username, identifier, password, otp }) => {
+        try {
+            const response = await api.post('/auth/signup/verify', {
+                username,
+                identifier,
+                password,
+                otp
+            });
+
+            const userColor = generateUserColor();
+            const userData = {
+                ...response.data,
+                color: userColor,
+                loginTime: new Date().toISOString()
+            };
+
+            localStorage.setItem('currentUser', JSON.stringify(userData));
+            localStorage.setItem('user', JSON.stringify(response.data));
+
+            return { success: true, user: userData };
+        } catch (error) {
+            console.error('Verify signup OTP failed', error);
+            const errorMessage = error.response?.data?.error || 'Signup verification failed.';
+            throw new Error(errorMessage);
+        }
+    },
+
     // ── Google OAuth ───────────────────────────────────────
 
     googleLogin: async (idToken) => {
@@ -295,11 +339,116 @@ export const authService = {
             const errorMessage = error.response?.data?.error || 'Google authentication failed.';
             throw new Error(errorMessage);
         }
+    },
+
+    // ── Profile API ───────────────────────────────────────
+
+    getProfile: async () => {
+        try {
+            const response = await api.get('/api/profile');
+            return response.data;
+        } catch (error) {
+            console.error('Get profile failed', error);
+            throw error;
+        }
+    },
+
+    updateProfile: async (data) => {
+        try {
+            const response = await api.put('/api/profile', data);
+            // Update local storage with new username if changed
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const updatedUser = { ...currentUser, ...response.data };
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            localStorage.setItem('user', JSON.stringify(response.data));
+            return response.data;
+        } catch (error) {
+            console.error('Update profile failed', error);
+            const errorMessage = error.response?.data?.error || 'Profile update failed.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    sendLinkEmailOtp: async (email) => {
+        try {
+            const response = await api.post('/api/profile/link-email/send', { email });
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Failed to send OTP.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    verifyLinkEmail: async (email, otp) => {
+        try {
+            const response = await api.post('/api/profile/link-email/verify', { email, otp });
+            return response.data;
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Email linking failed.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    sendLinkPhoneOtp: async (phone) => {
+        try {
+            const response = await api.post('/api/profile/link-phone/send', { phone });
+            return { success: true, message: response.data.message };
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Failed to send OTP.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    verifyLinkPhone: async (phone, otp) => {
+        try {
+            const response = await api.post('/api/profile/link-phone/verify', { phone, otp });
+            return response.data;
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Phone linking failed.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    linkGoogle: async (idToken) => {
+        try {
+            const response = await api.post('/api/profile/link-google', { idToken });
+            return response.data;
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Google linking failed.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    unlinkEmail: async () => {
+        try {
+            const response = await api.post('/api/profile/unlink-email');
+            return response.data;
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Cannot unlink email.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    unlinkPhone: async () => {
+        try {
+            const response = await api.post('/api/profile/unlink-phone');
+            return response.data;
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Cannot unlink phone.';
+            throw new Error(errorMessage);
+        }
+    },
+
+    unlinkGoogle: async () => {
+        try {
+            const response = await api.post('/api/profile/unlink-google');
+            return response.data;
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || 'Cannot unlink Google.';
+            throw new Error(errorMessage);
+        }
     }
 }
-
-
-
 
 
 

@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import MainPage from "./pages/MainPage";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Profile from "./pages/Profile";
 import ProtectedRoute from './components/ProtectedRoute';
 import Chat from "./pages/ChatArea.jsx";
 
@@ -18,6 +19,11 @@ function App() {
                     <Route path="/chatarea" element={
                         <ProtectedRoute>
                             <Chat/>
+                        </ProtectedRoute>
+                    }/>
+                    <Route path="/profile" element={
+                        <ProtectedRoute>
+                            <Profile/>
                         </ProtectedRoute>
                     }/>
                     <Route path="*" element={<Navigate to="/" replace />} />

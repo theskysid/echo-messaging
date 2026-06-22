@@ -18,7 +18,7 @@ public class UserService {
         return userRepository.existsByUsername(username);
     }
 
-    public boolean isUserOnline(Long userId) {
-        return onlineUserService.isOnline(userId);
+    public boolean isUserOnline(String username) {
+        return onlineUserService.isOnline(username);
     }
 }

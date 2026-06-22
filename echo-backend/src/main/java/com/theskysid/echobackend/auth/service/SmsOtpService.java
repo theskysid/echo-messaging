@@ -1,5 +1,6 @@
 package com.theskysid.echobackend.auth.service;
 
+import com.theskysid.echobackend.auth.util.IdentifierNormalizer;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +20,10 @@ public class SmsOtpService {
     private int otpExpiryMinutes;
 
     public void sendOtp(String phone) {
-        String otp = otpService.createOrUpdateForPhone(phone);
+        String normalizedPhone = IdentifierNormalizer.normalizePhone(phone);
+        String otp = otpService.createOrUpdateForPhone(normalizedPhone);
         Message.creator(
-                new PhoneNumber(phone),
+                new PhoneNumber(normalizedPhone),
                 new PhoneNumber(twilioPhoneNumber),
                 "Your Echo Messaging OTP code is: " + otp + ". Expires in " + otpExpiryMinutes + " minutes.").create();
     }

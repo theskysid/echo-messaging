@@ -2,8 +2,6 @@ package com.theskysid.echobackend.messaging.websocket;
 
 import com.theskysid.echobackend.auth.service.OnlineUserService;
 import com.theskysid.echobackend.messaging.entity.ChatMessage;
-import com.theskysid.echobackend.user.entity.User;
-import com.theskysid.echobackend.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +15,6 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 @Component
 public class WebSocketListener {
 
-    @Autowired private UserRepository userRepository;
     @Autowired private OnlineUserService onlineUserService;
     @Autowired private SimpMessageSendingOperations messagingTemplate;
 
@@ -34,8 +31,7 @@ public class WebSocketListener {
         String username = (String) headerAccessor.getSessionAttributes().get("username");
         if (username == null) return;
 
-        userRepository.findByUsername(username).map(User::getId)
-                .ifPresent(onlineUserService::markOffline);
+        onlineUserService.markOffline(username);
 
         ChatMessage chatMessage = new ChatMessage();
         chatMessage.setType(ChatMessage.MessageType.LEAVE);

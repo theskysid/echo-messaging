@@ -2,14 +2,16 @@ package com.theskysid.echobackend.auth.service;
 
 import com.theskysid.echobackend.auth.dto.request.LoginRequestDTO;
 import com.theskysid.echobackend.auth.dto.request.RegisterRequestDTO;
+import com.theskysid.echobackend.auth.dto.request.SignupOtpRequestDTO;
 import com.theskysid.echobackend.auth.dto.response.LoginResponseDTO;
+import com.theskysid.echobackend.auth.otp.entity.OtpVerification.IdentifierType;
+import com.theskysid.echobackend.auth.util.IdentifierNormalizer;
 import com.theskysid.echobackend.user.dto.UserDTO;
 import com.theskysid.echobackend.auth.jwt.JwtService;
 import com.theskysid.echobackend.user.entity.AuthProvider;
 import com.theskysid.echobackend.user.entity.User;
 import com.theskysid.echobackend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +20,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 public class AuthenticationService {
@@ -39,35 +41,99 @@ public class AuthenticationService {
     @Autowired
     private OnlineUserService onlineUserService;
 
-    @Value("${app.secure-cookie:true}")
-    private boolean secureCookie;
+    @Autowired
+    private OtpService otpService;
 
     public UserDTO signup(RegisterRequestDTO registerRequestDTO) {
-        if (userRepository.findByUsername(registerRequestDTO.getUsername()).isPresent()) {
+        String username = IdentifierNormalizer.normalizeUsername(registerRequestDTO.getUsername());
+        if (username == null || username.isBlank()) {
+            throw new RuntimeException("Username is required");
+        }
+        if (registerRequestDTO.getPassword() == null || registerRequestDTO.getPassword().isBlank()) {
+            throw new RuntimeException("Password is required");
+        }
+        if (registerRequestDTO.getEmail() == null || registerRequestDTO.getEmail().isBlank()) {
+            throw new RuntimeException("Email is required");
+        }
+
+        String email = IdentifierNormalizer.normalizeEmail(registerRequestDTO.getEmail());
+        if (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
             throw new RuntimeException("Username is already in use");
         }
+        if (userRepository.findByEmailIgnoreCase(email).isPresent()) {
+            throw new RuntimeException("Email is already in use");
+        }
         User user = new User();
-        user.setUsername(registerRequestDTO.getUsername());
+        user.setUsername(username);
         user.setPassword(passwordEncoder.encode(registerRequestDTO.getPassword()));
-        user.setEmail(registerRequestDTO.getEmail());
+        user.setEmail(email);
         user.setAuthProvider(AuthProvider.EMAIL);
         return convertToUserDTO(userRepository.save(user));
     }
 
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
+        String username = IdentifierNormalizer.normalizeUsername(loginRequestDTO.getUsername());
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        loginRequestDTO.getUsername(), loginRequestDTO.getPassword()));
+                        username, loginRequestDTO.getPassword()));
 
-        User user = userRepository.findByUsername(loginRequestDTO.getUsername())
+        User user = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        onlineUserService.markOnline(user.getId());
+        return issueLoginResponse(user);
+    }
 
-        return LoginResponseDTO.builder()
-                .token(jwtService.generateToken(user))
-                .userDTO(convertToUserDTO(user))
-                .build();
+    public LoginResponseDTO loginWithOtp(String identifier, IdentifierType type) {
+        User user = findByIdentifier(identifier, type)
+                .orElseThrow(() -> new RuntimeException(type == IdentifierType.EMAIL
+                        ? "No account linked to this email"
+                        : "No account linked to this phone"));
+        return issueLoginResponse(user);
+    }
+
+    public LoginResponseDTO signupWithOtp(SignupOtpRequestDTO request) {
+        String username = IdentifierNormalizer.normalizeUsername(request.getUsername());
+        String identifier = IdentifierNormalizer.normalizeIdentifier(request.getIdentifier());
+
+        if (username == null || username.isBlank()) {
+            throw new RuntimeException("Username is required");
+        }
+        if (identifier == null || identifier.isBlank()) {
+            throw new RuntimeException("Email or phone is required");
+        }
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new RuntimeException("Password is required");
+        }
+
+        IdentifierType type = IdentifierNormalizer.isEmail(identifier) ? IdentifierType.EMAIL : IdentifierType.PHONE;
+        String normalizedIdentifier = normalizeByType(identifier, type);
+        otpService.verifyOtp(normalizedIdentifier, type, request.getOtp());
+
+        Optional<User> existingUser = findByIdentifier(normalizedIdentifier, type);
+        Optional<User> usernameOwner = userRepository.findByUsernameIgnoreCase(username);
+
+        if (usernameOwner.isPresent() && existingUser.map(user -> !usernameOwner.get().getId().equals(user.getId())).orElse(true)) {
+            throw new RuntimeException("Username is already in use");
+        }
+
+        if (existingUser.isPresent() && hasPassword(existingUser.get())) {
+            throw new RuntimeException("An account already exists for this identifier. Please log in instead.");
+        }
+
+        User user = existingUser.orElseGet(User::new);
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        if (type == IdentifierType.EMAIL) {
+            user.setEmail(normalizedIdentifier);
+        } else {
+            user.setPhone(normalizedIdentifier);
+        }
+        if (user.getAuthProvider() == null) {
+            user.setAuthProvider(type == IdentifierType.EMAIL ? AuthProvider.EMAIL : AuthProvider.PHONE);
+        }
+
+        User saved = userRepository.save(user);
+        return issueLoginResponse(saved);
     }
 
     public ResponseEntity<String> logout() {
@@ -83,12 +149,32 @@ public class AuthenticationService {
                 .body("Logged out successfully");
     }
 
-    public Map<String, Object> getOnlineUsers() {
-        Set<Long> onlineIds = onlineUserService.getOnlineUserIds();
-        Map<String, Object> result = new java.util.HashMap<>();
-        result.put("onlineUserIds", onlineIds);
-        result.put("count", onlineIds.size());
-        return result;
+    public List<String> getOnlineUsers() {
+        return new java.util.ArrayList<>(onlineUserService.getOnlineUsernames());
+    }
+
+    public Optional<User> findByIdentifier(String identifier) {
+        String normalized = IdentifierNormalizer.normalizeIdentifier(identifier);
+        if (normalized == null || normalized.isBlank()) {
+            return Optional.empty();
+        }
+
+        return userRepository.findByUsernameIgnoreCase(normalized)
+                .or(() -> userRepository.findByEmailIgnoreCase(IdentifierNormalizer.normalizeEmail(normalized)))
+                .or(() -> findByIdentifier(normalized, IdentifierType.PHONE));
+    }
+
+    public Optional<User> findByIdentifier(String identifier, IdentifierType type) {
+        if (type == IdentifierType.EMAIL) {
+            return userRepository.findByEmailIgnoreCase(IdentifierNormalizer.normalizeEmail(identifier));
+        }
+
+        String normalizedPhone = IdentifierNormalizer.normalizePhone(identifier);
+        String trimmedPhone = IdentifierNormalizer.normalizeIdentifier(identifier);
+        return userRepository.findByPhone(trimmedPhone)
+                .or(() -> normalizedPhone.equals(trimmedPhone)
+                        ? Optional.empty()
+                        : userRepository.findByPhone(normalizedPhone));
     }
 
     public UserDTO convertToUserDTO(User user) {
@@ -96,6 +182,28 @@ public class AuthenticationService {
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
+        dto.setPhone(user.getPhone());
+        dto.setDisplayName(user.getDisplayName());
+        dto.setBio(user.getBio());
+        dto.setGoogleId(user.getGoogleId() != null ? "connected" : null);
+        dto.setAuthProvider(user.getAuthProvider() != null ? user.getAuthProvider().name() : null);
         return dto;
+    }
+
+    private LoginResponseDTO issueLoginResponse(User user) {
+        return LoginResponseDTO.builder()
+                .token(jwtService.generateToken(user))
+                .userDTO(convertToUserDTO(user))
+                .build();
+    }
+
+    private String normalizeByType(String identifier, IdentifierType type) {
+        return type == IdentifierType.EMAIL
+                ? IdentifierNormalizer.normalizeEmail(identifier)
+                : IdentifierNormalizer.normalizePhone(identifier);
+    }
+
+    private boolean hasPassword(User user) {
+        return user.getPassword() != null && !user.getPassword().isBlank();
     }
 }

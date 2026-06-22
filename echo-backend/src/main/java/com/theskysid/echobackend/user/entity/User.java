@@ -32,6 +32,12 @@ public class User {
     @Column(name = "google_id", unique = true)
     private String googleId;
 
+    @Column(name = "display_name")
+    private String displayName;
+
+    @Column(length = 200)
+    private String bio;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AuthProvider authProvider;
