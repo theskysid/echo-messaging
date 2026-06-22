@@ -2,13 +2,11 @@ package com.theskysid.echobackend.auth.controller;
 
 import com.theskysid.echobackend.auth.dto.OtpVerifyDTO;
 import com.theskysid.echobackend.auth.dto.request.OtpRequestDTO;
-import com.theskysid.echobackend.auth.jwt.JwtService;
 import com.theskysid.echobackend.auth.otp.entity.OtpVerification.IdentifierType;
 import com.theskysid.echobackend.auth.service.EmailOtpService;
 import com.theskysid.echobackend.auth.service.OtpService;
-import com.theskysid.echobackend.user.dto.UserDTO;
-import com.theskysid.echobackend.user.entity.User;
-import com.theskysid.echobackend.user.repository.UserRepository;
+import com.theskysid.echobackend.auth.dto.response.LoginResponseDTO;
+import com.theskysid.echobackend.auth.util.IdentifierNormalizer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -28,9 +26,7 @@ public class EmailOtpController {
     @Autowired
     private OtpService otpService;
     @Autowired
-    private JwtService jwtService;
-    @Autowired
-    private UserRepository userRepository;
+    private com.theskysid.echobackend.auth.service.AuthenticationService authenticationService;
 
     @Value("${app.secure-cookie:true}")
     private boolean secureCookie;
@@ -44,8 +40,9 @@ public class EmailOtpController {
     @PostMapping("/send")
     public ResponseEntity<?> sendOtp(@RequestBody OtpRequestDTO request) {
         try {
-            emailOtpService.sendOtp(request.getEmail());
-            return ResponseEntity.ok(Map.of("message", "OTP sent to " + request.getEmail()));
+            String normalizedEmail = IdentifierNormalizer.normalizeEmail(request.getEmail());
+            emailOtpService.sendOtp(normalizedEmail);
+            return ResponseEntity.ok(Map.of("message", "OTP sent to " + normalizedEmail));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", e.getMessage()));
@@ -61,13 +58,11 @@ public class EmailOtpController {
     @PostMapping("/verify")
     public ResponseEntity<?> verifyOtp(@RequestBody OtpVerifyDTO request) {
         try {
-            otpService.verifyOtp(request.getEmail(), IdentifierType.EMAIL, request.getOtp());
+            String normalizedEmail = IdentifierNormalizer.normalizeEmail(request.getEmail());
+            otpService.verifyOtp(normalizedEmail, IdentifierType.EMAIL, request.getOtp());
 
-            User user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            String jwt = jwtService.generateToken(user);
-            ResponseCookie cookie = ResponseCookie.from("JWT", jwt)
+            LoginResponseDTO loginResponse = authenticationService.loginWithOtp(normalizedEmail, IdentifierType.EMAIL);
+            ResponseCookie cookie = ResponseCookie.from("JWT", loginResponse.getToken())
                     .httpOnly(true)
                     .secure(secureCookie)
                     .path("/")
@@ -75,14 +70,9 @@ public class EmailOtpController {
                     .sameSite("Strict")
                     .build();
 
-            UserDTO dto = new UserDTO();
-            dto.setId(user.getId());
-            dto.setUsername(user.getUsername());
-            dto.setEmail(user.getEmail());
-
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                    .body(dto);
+                    .body(loginResponse.getUserDTO());
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", e.getMessage()));

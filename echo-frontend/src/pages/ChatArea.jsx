@@ -8,7 +8,7 @@ import '../styles/ChatArea.css';
 
 const ChatArea = () => {
     const navigate = useNavigate();
-    const currentUser = authService.getCurrentUser();
+    const [currentUser] = useState(() => authService.getCurrentUser());
 
     useEffect(() => {
         if (!currentUser) {
@@ -27,8 +27,11 @@ const ChatArea = () => {
 
     const privateMessageHandlers = useRef(new Map());
     const stompClient = useRef(null);
+    const socketRef = useRef(null);
     const messagesEndRef = useRef(null);
     const typingTimeoutRef = useRef(null);
+    const reconnectTimeoutRef = useRef(null);
+    const isMountedRef = useRef(true);
 
     const emojis = ['😀', '😂', '😍', '🤔', '👍', '❤️', '🎉', '🔥', '😎', '⭐', '✨', '💯'];
 
@@ -51,9 +54,36 @@ const ChatArea = () => {
     }, []);
 
     useEffect(() => {
-        let reconnectInterval;
+        isMountedRef.current = true;
+
+        const cleanupConnection = () => {
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current);
+                reconnectTimeoutRef.current = null;
+            }
+
+            if (stompClient.current) {
+                try {
+                    stompClient.current.disconnect();
+                } catch (error) {
+                    console.error('Error disconnecting STOMP client:', error);
+                }
+            }
+
+            if (socketRef.current) {
+                try {
+                    socketRef.current.close();
+                } catch (error) {
+                    console.error('Error closing SockJS socket:', error);
+                }
+            }
+
+            stompClient.current = null;
+            socketRef.current = null;
+        };
+
         const connectAndFetch = async () => {
-            if (!username) return;
+            if (!isMountedRef.current || !username) return;
 
             setOnlineUsers(prev => {
                 const newSet = new Set(prev);
@@ -61,15 +91,20 @@ const ChatArea = () => {
                 return newSet;
             });
 
-            const socket = new SockJS(`${import.meta.env.VITE_API_URL}/ws`);
-            stompClient.current = Stomp.over(socket);
+            cleanupConnection();
+
+            socketRef.current = new SockJS(`${import.meta.env.VITE_API_URL}/ws`);
+            stompClient.current = Stomp.over(socketRef.current);
 
             stompClient.current.connect({
                 'client-id': username,
                 'session-id': Date.now().toString(),
                 'username': username
             }, (frame) => {
-                clearInterval(reconnectInterval);
+                if (reconnectTimeoutRef.current) {
+                    clearTimeout(reconnectTimeoutRef.current);
+                    reconnectTimeoutRef.current = null;
+                }
 
                 const publicSub = stompClient.current.subscribe('/topic/public', (msg) => {
                     const chatMessage = JSON.parse(msg.body);
@@ -129,13 +164,15 @@ const ChatArea = () => {
 
                 authService.getOnlineUsers()
                     .then(data => {
-                        const fetchedUsers = Object.keys(data);
-                        setOnlineUsers(prev => {
-                            const mergedSet = new Set(prev);
-                            fetchedUsers.forEach(user => mergedSet.add(user));
-                            mergedSet.add(username);
-                            return mergedSet;
-                        });
+                        // data is now a flat array of usernames: ["user1", "user2"]
+                        if (isMountedRef.current && Array.isArray(data)) {
+                            setOnlineUsers(prev => {
+                                const mergedSet = new Set(prev);
+                                data.forEach(user => mergedSet.add(user));
+                                mergedSet.add(username);
+                                return mergedSet;
+                            });
+                        }
                     })
                     .catch(error => {
                         console.error('Error fetching initial online users:', error);
@@ -143,8 +180,8 @@ const ChatArea = () => {
 
             }, (error) => {
                 console.error('STOMP connection error:', error);
-                if (!reconnectInterval) {
-                    reconnectInterval = setInterval(() => {
+                if (isMountedRef.current && !reconnectTimeoutRef.current) {
+                    reconnectTimeoutRef.current = setTimeout(() => {
                         connectAndFetch();
                     }, 5000);
                 }
@@ -154,13 +191,11 @@ const ChatArea = () => {
         connectAndFetch();
 
         return () => {
-            if (stompClient.current && stompClient.current.connected) {
-                stompClient.current.disconnect();
-            }
+            isMountedRef.current = false;
+            cleanupConnection();
             clearTimeout(typingTimeoutRef.current);
-            clearInterval(reconnectInterval);
         };
-    }, [username, userColor, registerPrivateMessageHandler, unregisterPrivateMessageHandler]);
+    }, [username]);
 
     const openPrivateChat = (otherUser) => {
         if (otherUser === username) return;
