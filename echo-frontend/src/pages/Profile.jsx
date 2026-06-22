@@ -45,7 +45,7 @@ const Profile = () => {
       setBio(data.bio || "");
       setUsername(data.username || "");
     } catch (error) {
-      showMessage("Failed to load profile", "error");
+      showMessage(error.message || "Failed to load profile", "error");
       if (error.response?.status === 401) {
         navigate("/login");
       }

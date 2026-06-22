@@ -15,7 +15,7 @@ public class UserService {
     private OnlineUserService onlineUserService;
 
     public boolean userExists(String username) {
-        return userRepository.existsByUsername(username);
+        return userRepository.findByUsernameIgnoreCase(username).isPresent();
     }
 
     public boolean isUserOnline(String username) {

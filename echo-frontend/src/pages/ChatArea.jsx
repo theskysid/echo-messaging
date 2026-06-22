@@ -8,7 +8,7 @@ import '../styles/ChatArea.css';
 
 const ChatArea = () => {
     const navigate = useNavigate();
-    const currentUser = authService.getCurrentUser();
+    const [currentUser] = useState(() => authService.getCurrentUser());
 
     useEffect(() => {
         if (!currentUser) {
@@ -195,7 +195,7 @@ const ChatArea = () => {
             cleanupConnection();
             clearTimeout(typingTimeoutRef.current);
         };
-    }, [username, userColor, registerPrivateMessageHandler, unregisterPrivateMessageHandler]);
+    }, [username]);
 
     const openPrivateChat = (otherUser) => {
         if (otherUser === username) return;

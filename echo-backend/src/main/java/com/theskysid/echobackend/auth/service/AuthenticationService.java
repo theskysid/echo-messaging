@@ -12,6 +12,7 @@ import com.theskysid.echobackend.user.entity.AuthProvider;
 import com.theskysid.echobackend.user.entity.User;
 import com.theskysid.echobackend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,9 @@ public class AuthenticationService {
 
     @Autowired
     private OtpService otpService;
+
+    @Value("${app.secure-cookie:true}")
+    private boolean secureCookie;
 
     public UserDTO signup(RegisterRequestDTO registerRequestDTO) {
         String username = IdentifierNormalizer.normalizeUsername(registerRequestDTO.getUsername());
@@ -84,11 +88,16 @@ public class AuthenticationService {
     }
 
     public LoginResponseDTO loginWithOtp(String identifier, IdentifierType type) {
-        User user = findByIdentifier(identifier, type)
+        User user = resolveUserForOtpLogin(identifier, type)
                 .orElseThrow(() -> new RuntimeException(type == IdentifierType.EMAIL
                         ? "No account linked to this email"
                         : "No account linked to this phone"));
         return issueLoginResponse(user);
+    }
+
+    public User resolveAuthenticatedUser(String username) {
+        return userRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     public LoginResponseDTO signupWithOtp(SignupOtpRequestDTO request) {
@@ -168,13 +177,48 @@ public class AuthenticationService {
         if (type == IdentifierType.EMAIL) {
             return userRepository.findByEmailIgnoreCase(IdentifierNormalizer.normalizeEmail(identifier));
         }
+        return findByPhoneFlexible(identifier);
+    }
 
-        String normalizedPhone = IdentifierNormalizer.normalizePhone(identifier);
-        String trimmedPhone = IdentifierNormalizer.normalizeIdentifier(identifier);
-        return userRepository.findByPhone(trimmedPhone)
-                .or(() -> normalizedPhone.equals(trimmedPhone)
-                        ? Optional.empty()
-                        : userRepository.findByPhone(normalizedPhone));
+    private Optional<User> resolveUserForOtpLogin(String identifier, IdentifierType type) {
+        String normalized = normalizeByType(identifier, type);
+        return findByIdentifier(normalized, type)
+                .or(() -> type == IdentifierType.PHONE
+                        ? findByPhoneFlexible(identifier)
+                        : Optional.empty())
+                .or(() -> findByIdentifier(normalized));
+    }
+
+    private Optional<User> findByPhoneFlexible(String phone) {
+        String normalizedPhone = IdentifierNormalizer.normalizePhone(phone);
+        if (normalizedPhone.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String digitsOnly = normalizedPhone.replaceAll("\\D", "");
+        Optional<User> byDigits = userRepository.findByPhoneDigits(digitsOnly);
+        if (byDigits.isPresent()) {
+            return byDigits;
+        }
+
+        Optional<User> direct = userRepository.findByPhone(normalizedPhone);
+        if (direct.isPresent()) {
+            return direct;
+        }
+
+        if (normalizedPhone.startsWith("+")) {
+            direct = userRepository.findByPhone(normalizedPhone.substring(1));
+            if (direct.isPresent()) {
+                return direct;
+            }
+        } else {
+            direct = userRepository.findByPhone("+" + normalizedPhone);
+            if (direct.isPresent()) {
+                return direct;
+            }
+        }
+
+        return userRepository.findByPhone(digitsOnly);
     }
 
     public UserDTO convertToUserDTO(User user) {

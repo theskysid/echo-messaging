@@ -157,11 +157,14 @@ export const authService = {
             else if(userStr){
                 const userData = JSON.parse(userStr);
                 const userColor = generateUserColor();
-
-                return{
+                const enrichedUser = {
                     ...userData,
-                    color: userColor
+                    color: userColor,
+                    loginTime: new Date().toISOString()
                 };
+
+                localStorage.setItem('currentUser', JSON.stringify(enrichedUser));
+                return enrichedUser;
             }
             return null
         }
@@ -312,7 +315,7 @@ export const authService = {
             return { success: true, user: userData };
         } catch (error) {
             console.error('Verify signup OTP failed', error);
-            const errorMessage = error.response?.data?.error || 'Signup verification failed.';
+            const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Signup verification failed.';
             throw new Error(errorMessage);
         }
     },
@@ -349,7 +352,8 @@ export const authService = {
             return response.data;
         } catch (error) {
             console.error('Get profile failed', error);
-            throw error;
+            const errorMessage = error.response?.data?.error || 'Failed to load profile.';
+            throw new Error(errorMessage);
         }
     },
 

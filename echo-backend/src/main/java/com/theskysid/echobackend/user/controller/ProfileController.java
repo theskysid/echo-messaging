@@ -4,6 +4,7 @@ import com.theskysid.echobackend.auth.dto.OtpVerifyDTO;
 import com.theskysid.echobackend.auth.dto.GoogleAuthDTO;
 import com.theskysid.echobackend.auth.dto.request.OtpRequestDTO;
 import com.theskysid.echobackend.auth.otp.entity.OtpVerification.IdentifierType;
+import com.theskysid.echobackend.auth.service.AuthenticationService;
 import com.theskysid.echobackend.auth.service.EmailOtpService;
 import com.theskysid.echobackend.auth.service.OtpService;
 import com.theskysid.echobackend.auth.service.SmsOtpService;
@@ -12,6 +13,7 @@ import com.theskysid.echobackend.user.dto.UserDTO;
 import com.theskysid.echobackend.user.entity.AuthProvider;
 import com.theskysid.echobackend.user.entity.User;
 import com.theskysid.echobackend.user.repository.UserRepository;
+import com.theskysid.echobackend.auth.util.IdentifierNormalizer;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -33,6 +35,9 @@ public class ProfileController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AuthenticationService authenticationService;
 
     @Autowired
     private EmailOtpService emailOtpService;
@@ -64,8 +69,7 @@ public class ProfileController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
         return ResponseEntity.ok(toDTO(user));
     }
 
@@ -77,8 +81,7 @@ public class ProfileController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
 
         if (request.getDisplayName() != null) {
             user.setDisplayName(request.getDisplayName().trim());
@@ -90,8 +93,8 @@ public class ProfileController {
         }
         if (request.getUsername() != null && !request.getUsername().trim().isEmpty()) {
             String newUsername = request.getUsername().trim();
-            if (!newUsername.equals(user.getUsername())) {
-                if (userRepository.findByUsername(newUsername).isPresent()) {
+            if (!newUsername.equalsIgnoreCase(user.getUsername())) {
+                if (userRepository.findByUsernameIgnoreCase(newUsername).isPresent()) {
                     return ResponseEntity.badRequest().body(Map.of("error", "Username already taken"));
                 }
                 user.setUsername(newUsername);
@@ -111,16 +114,15 @@ public class ProfileController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
         try {
-            // Check if this email is already used by another user
-            User currentUser = userRepository.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-            userRepository.findByEmail(request.getEmail()).ifPresent(existing -> {
+            String normalizedEmail = IdentifierNormalizer.normalizeEmail(request.getEmail());
+            User currentUser = authenticationService.resolveAuthenticatedUser(authentication.getName());
+            userRepository.findByEmailIgnoreCase(normalizedEmail).ifPresent(existing -> {
                 if (!existing.getId().equals(currentUser.getId())) {
                     throw new RuntimeException("This email is already linked to another account");
                 }
             });
-            emailOtpService.sendOtp(request.getEmail());
-            return ResponseEntity.ok(Map.of("message", "OTP sent to " + request.getEmail()));
+            emailOtpService.sendOtp(normalizedEmail);
+            return ResponseEntity.ok(Map.of("message", "OTP sent to " + normalizedEmail));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -135,19 +137,18 @@ public class ProfileController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
         try {
-            otpService.verifyOtp(request.getEmail(), IdentifierType.EMAIL, request.getOtp());
-            User user = userRepository.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            String normalizedEmail = IdentifierNormalizer.normalizeEmail(request.getEmail());
+            otpService.verifyOtp(normalizedEmail, IdentifierType.EMAIL, request.getOtp());
+            User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
 
-            // Remove email from any auto-created OTP account
-            userRepository.findByEmail(request.getEmail()).ifPresent(existing -> {
+            userRepository.findByEmailIgnoreCase(normalizedEmail).ifPresent(existing -> {
                 if (!existing.getId().equals(user.getId())) {
                     existing.setEmail(null);
                     userRepository.save(existing);
                 }
             });
 
-            user.setEmail(request.getEmail());
+            user.setEmail(normalizedEmail);
             User saved = userRepository.save(user);
             return ResponseEntity.ok(toDTO(saved));
         } catch (RuntimeException e) {
@@ -164,15 +165,15 @@ public class ProfileController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
         try {
-            User currentUser = userRepository.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-            userRepository.findByPhone(request.getPhone()).ifPresent(existing -> {
+            String normalizedPhone = IdentifierNormalizer.normalizePhone(request.getPhone());
+            User currentUser = authenticationService.resolveAuthenticatedUser(authentication.getName());
+            authenticationService.findByIdentifier(normalizedPhone, IdentifierType.PHONE).ifPresent(existing -> {
                 if (!existing.getId().equals(currentUser.getId())) {
                     throw new RuntimeException("This phone is already linked to another account");
                 }
             });
-            smsOtpService.sendOtp(request.getPhone());
-            return ResponseEntity.ok(Map.of("message", "OTP sent to " + request.getPhone()));
+            smsOtpService.sendOtp(normalizedPhone);
+            return ResponseEntity.ok(Map.of("message", "OTP sent to " + normalizedPhone));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
@@ -187,19 +188,18 @@ public class ProfileController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
         try {
-            otpService.verifyOtp(request.getPhone(), IdentifierType.PHONE, request.getOtp());
-            User user = userRepository.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            String normalizedPhone = IdentifierNormalizer.normalizePhone(request.getPhone());
+            otpService.verifyOtp(normalizedPhone, IdentifierType.PHONE, request.getOtp());
+            User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
 
-            // Remove phone from any auto-created OTP account
-            userRepository.findByPhone(request.getPhone()).ifPresent(existing -> {
+            authenticationService.findByIdentifier(normalizedPhone, IdentifierType.PHONE).ifPresent(existing -> {
                 if (!existing.getId().equals(user.getId())) {
                     existing.setPhone(null);
                     userRepository.save(existing);
                 }
             });
 
-            user.setPhone(request.getPhone());
+            user.setPhone(normalizedPhone);
             User saved = userRepository.save(user);
             return ResponseEntity.ok(toDTO(saved));
         } catch (RuntimeException e) {
@@ -222,8 +222,7 @@ public class ProfileController {
             }
 
             String googleId = idToken.getPayload().getSubject();
-            User user = userRepository.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
 
             // Check if this Google ID is already used by another user
             userRepository.findByGoogleId(googleId).ifPresent(existing -> {
@@ -250,8 +249,7 @@ public class ProfileController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
 
         if (!hasAlternativeAuth(user, "email")) {
             return ResponseEntity.badRequest().body(Map.of("error", "Cannot unlink your only login method"));
@@ -269,8 +267,7 @@ public class ProfileController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
 
         if (!hasAlternativeAuth(user, "phone")) {
             return ResponseEntity.badRequest().body(Map.of("error", "Cannot unlink your only login method"));
@@ -288,8 +285,7 @@ public class ProfileController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
 
         if (!hasAlternativeAuth(user, "google")) {
             return ResponseEntity.badRequest().body(Map.of("error", "Cannot unlink your only login method"));

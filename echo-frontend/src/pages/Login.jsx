@@ -16,7 +16,6 @@ const Login = () => {
   const [countdown, setCountdown] = useState(0);
   const navigate = useNavigate();
 
-  // Countdown timer for OTP resend
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
@@ -38,7 +37,6 @@ const Login = () => {
     setIdentifier("");
   };
 
-  // ── Password Login ───────────────────────────────────────
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -56,7 +54,6 @@ const Login = () => {
     }
   };
 
-  // ── OTP Login ─────────────────────────────────────────────
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -90,7 +87,6 @@ const Login = () => {
     }
   };
 
-  // ── Google OAuth ─────────────────────────────────────────
   const handleGoogleSuccess = async (credentialResponse) => {
     setMessage("");
     setIsLoading(true);
@@ -109,7 +105,9 @@ const Login = () => {
     }
   };
 
-  const isSuccess = message.toLowerCase().includes("successful") || message.toLowerCase().includes("sent");
+  const isSuccess =
+    message.toLowerCase().includes("successful") ||
+    message.toLowerCase().includes("sent");
 
   return (
     <div className="login-container">
@@ -119,7 +117,6 @@ const Login = () => {
           <p>Welcome back to Echo</p>
         </div>
 
-        {/* ── Auth Tabs ─────────────────────────────────── */}
         <div className="auth-tabs">
           <button
             className={`auth-tab ${activeTab === "password" ? "active" : ""}`}
@@ -128,20 +125,13 @@ const Login = () => {
             🔒 Password
           </button>
           <button
-            className={`auth-tab ${activeTab === "email" ? "active" : ""}`}
-            onClick={() => handleTabChange("email")}
+            className={`auth-tab ${activeTab === "otp" ? "active" : ""}`}
+            onClick={() => handleTabChange("otp")}
           >
-            ✉️ Email OTP
-          </button>
-          <button
-            className={`auth-tab ${activeTab === "phone" ? "active" : ""}`}
-            onClick={() => handleTabChange("phone")}
-          >
-            📱 Phone OTP
+            🔑 OTP
           </button>
         </div>
 
-        {/* ── Password Tab ──────────────────────────────── */}
         {activeTab === "password" && (
           <form onSubmit={handlePasswordLogin} className="login-form">
             <input
@@ -174,24 +164,25 @@ const Login = () => {
           </form>
         )}
 
-        {/* ── Email OTP Tab ─────────────────────────────── */}
-        {activeTab === "email" && (
+        {activeTab === "otp" && (
           <form
-            onSubmit={otpSent ? handleVerifyEmailOtp : handleSendEmailOtp}
+            onSubmit={otpSent ? handleVerifyOtp : handleSendOtp}
             className="login-form"
           >
             <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              placeholder="Email or phone number"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="auth-input"
               required
               disabled={isLoading || otpSent}
             />
             {otpSent && (
               <div className="otp-section">
-                <p className="otp-label">Enter the 6-digit code sent to your email</p>
+                <p className="otp-label">
+                  Enter the 6-digit code sent to your email or phone
+                </p>
                 <input
                   type="text"
                   placeholder="Enter OTP"
@@ -213,7 +204,7 @@ const Login = () => {
                   <button
                     type="button"
                     className="resend-btn"
-                    onClick={handleSendEmailOtp}
+                    onClick={handleSendOtp}
                     disabled={isLoading}
                   >
                     Resend OTP
@@ -226,7 +217,7 @@ const Login = () => {
               disabled={
                 otpSent
                   ? otp.length !== 6 || isLoading
-                  : !email.trim() || isLoading
+                  : !identifier.trim() || isLoading
               }
               className="auth-submit-btn"
             >
@@ -239,72 +230,6 @@ const Login = () => {
           </form>
         )}
 
-        {/* ── Phone OTP Tab ─────────────────────────────── */}
-        {activeTab === "phone" && (
-          <form
-            onSubmit={otpSent ? handleVerifyPhoneOtp : handleSendPhoneOtp}
-            className="login-form"
-          >
-            <input
-              type="tel"
-              placeholder="Phone number (e.g. +91XXXXXXXXXX)"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="auth-input"
-              required
-              disabled={isLoading || otpSent}
-            />
-            {otpSent && (
-              <div className="otp-section">
-                <p className="otp-label">Enter the 6-digit code sent to your phone</p>
-                <input
-                  type="text"
-                  placeholder="Enter OTP"
-                  value={otp}
-                  onChange={(e) =>
-                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  className="auth-input otp-input"
-                  maxLength={6}
-                  required
-                  disabled={isLoading}
-                  autoFocus
-                />
-                {countdown > 0 ? (
-                  <p className="otp-countdown">
-                    Resend OTP in <span>{countdown}s</span>
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    className="resend-btn"
-                    onClick={handleSendPhoneOtp}
-                    disabled={isLoading}
-                  >
-                    Resend OTP
-                  </button>
-                )}
-              </div>
-            )}
-            <button
-              type="submit"
-              disabled={
-                otpSent
-                  ? otp.length !== 6 || isLoading
-                  : !phone.trim() || isLoading
-              }
-              className="auth-submit-btn"
-            >
-              {isLoading
-                ? "Please wait..."
-                : otpSent
-                ? "Verify & Login"
-                : "Send OTP"}
-            </button>
-          </form>
-        )}
-
-        {/* ── Message ───────────────────────────────────── */}
         {message && (
           <p
             className="auth-message"
@@ -314,12 +239,10 @@ const Login = () => {
           </p>
         )}
 
-        {/* ── Divider ───────────────────────────────────── */}
         <div className="auth-divider">
           <span>or</span>
         </div>
 
-        {/* ── Google Sign-In ────────────────────────────── */}
         <div className="google-btn-wrapper">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}
@@ -332,7 +255,6 @@ const Login = () => {
           />
         </div>
 
-        {/* ── Toggle to Signup ──────────────────────────── */}
         <div className="toggle-auth">
           <p>
             Don't have an account?

@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -53,18 +54,22 @@ public class AuthController {
     }
 
     @PostMapping("/signup/verify")
-    public ResponseEntity<UserDTO> verifySignup(@RequestBody SignupOtpRequestDTO request) {
-        LoginResponseDTO signupResponse = authenticationService.signupWithOtp(request);
-        ResponseCookie responseCookie = ResponseCookie.from("JWT", signupResponse.getToken())
-                .httpOnly(true)
-                .secure(secureCookie)
-                .path("/")
-                .maxAge(60 * 60)
-                .sameSite("Strict")
-                .build();
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
-                .body(signupResponse.getUserDTO());
+    public ResponseEntity<?> verifySignup(@RequestBody SignupOtpRequestDTO request) {
+        try {
+            LoginResponseDTO signupResponse = authenticationService.signupWithOtp(request);
+            ResponseCookie responseCookie = ResponseCookie.from("JWT", signupResponse.getToken())
+                    .httpOnly(true)
+                    .secure(secureCookie)
+                    .path("/")
+                    .maxAge(60 * 60)
+                    .sameSite("Strict")
+                    .build();
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
+                    .body(signupResponse.getUserDTO());
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/logout")
@@ -82,8 +87,7 @@ public class AuthController {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("USER NOT AUTHORIZED");
         }
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = authenticationService.resolveAuthenticatedUser(authentication.getName());
         return ResponseEntity.ok(authenticationService.convertToUserDTO(user));
     }
 }

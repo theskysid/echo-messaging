@@ -1,12 +1,10 @@
 package com.theskysid.echobackend.messaging.websocket;
 
 import com.theskysid.echobackend.auth.service.OnlineUserService;
-import com.theskysid.echobackend.messaging.entity.ChatMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
-import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
@@ -16,7 +14,6 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 public class WebSocketListener {
 
     @Autowired private OnlineUserService onlineUserService;
-    @Autowired private SimpMessageSendingOperations messagingTemplate;
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketListener.class);
 
@@ -28,14 +25,11 @@ public class WebSocketListener {
     @EventListener
     public void handleWebsocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
-        if (username == null) return;
+        String sessionId = headerAccessor.getSessionId();
+        if (sessionId == null) {
+            return;
+        }
 
-        onlineUserService.markOffline(username);
-
-        ChatMessage chatMessage = new ChatMessage();
-        chatMessage.setType(ChatMessage.MessageType.LEAVE);
-        chatMessage.setSender(username);
-        messagingTemplate.convertAndSend("/topic/public", chatMessage);
+        onlineUserService.unregisterSession(sessionId);
     }
 }
