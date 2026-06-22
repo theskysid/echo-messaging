@@ -93,9 +93,10 @@ jobs:
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
             ENVEOF
 
-            # 📦 Pull new images and recreate containers
-            docker-compose -f docker-compose.staging.yml --env-file .env.staging pull
-            docker-compose -f docker-compose.staging.yml --env-file .env.staging up -d --force-recreate
+            # 📦 Auto-detect compose command, pull and recreate containers
+            docker compose version &>/dev/null && DC="docker compose" || DC="docker-compose"
+            $DC -f docker-compose.staging.yml --env-file .env.staging pull
+            $DC -f docker-compose.staging.yml --env-file .env.staging up -d --force-recreate
             docker image prune --force
 
       - name: Verify staging deployment
@@ -158,9 +159,10 @@ jobs:
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
             ENVEOF
 
-            # 📦 Pull new images and recreate containers
-            docker-compose -f docker-compose.yml --env-file .env pull
-            docker-compose -f docker-compose.yml --env-file .env up -d --force-recreate
+            # 📦 Auto-detect compose command, pull and recreate containers
+            docker compose version &>/dev/null && DC="docker compose" || DC="docker-compose"
+            $DC -f docker-compose.yml --env-file .env pull
+            $DC -f docker-compose.yml --env-file .env up -d --force-recreate
             docker image prune --force
 
       - name: Verify production deployment
