@@ -96,7 +96,7 @@ jobs:
             # 📦 Pull new images and recreate containers
             docker-compose -f docker-compose.staging.yml --env-file .env.staging pull
             docker-compose -f docker-compose.staging.yml --env-file .env.staging up -d --force-recreate
-            docker image prune -force
+            docker image prune --force
 
       - name: Verify staging deployment
         uses: appleboy/ssh-action@v1
@@ -159,8 +159,8 @@ jobs:
             ENVEOF
 
             # 📦 Pull new images and recreate containers
-            docker compose -f docker-compose.yml --env-file .env pull
-            docker compose -f docker-compose.yml --env-file .env up -d --force-recreate
+            docker-compose -f docker-compose.yml --env-file .env pull
+            docker-compose -f docker-compose.yml --env-file .env up -d --force-recreate
             docker image prune --force
 
       - name: Verify production deployment
