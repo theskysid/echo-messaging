@@ -94,8 +94,8 @@ jobs:
             ENVEOF
 
             # 📦 Pull new images and recreate containers
-            docker compose -f docker-compose.staging.yml --env-file .env.staging pull
-            docker compose -f docker-compose.staging.yml --env-file .env.staging up -d --force-recreate
+            docker-compose -f docker-compose.staging.yml --env-file .env.staging pull
+            docker-compose -f docker-compose.staging.yml --env-file .env.staging up -d --force-recreate
             docker image prune -force
 
       - name: Verify staging deployment
