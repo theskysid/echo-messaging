@@ -91,6 +91,7 @@ jobs:
             MAIL_PORT=${{ secrets.MAIL_PORT }}
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            APP_SECURE_COOKIE=false
             ENVEOF
 
             # 📦 Auto-detect compose command, pull and recreate containers
@@ -157,6 +158,7 @@ jobs:
             MAIL_PORT=${{ secrets.MAIL_PORT }}
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
+            APP_SECURE_COOKIE=false
             ENVEOF
 
             # 📦 Auto-detect compose command, pull and recreate containers
