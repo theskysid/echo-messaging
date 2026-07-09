@@ -8,7 +8,7 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat&logo=githubactions&logoColor=white)
 
-A real-time chat application with public group messaging, private conversations, and multi-method authentication. Built with Spring Boot and React, connected over WebSocket (STOMP/SockJS), and deployed via a two-environment CI/CD pipeline to AWS EC2.
+A real-time chat application with public group messaging, private conversations, and multi-method authentication. Built with Spring Boot and React, connected over WebSocket (STOMP/SockJS), and deployed via CI/CD pipeline to AWS EC2.
 
 ---
 
@@ -118,7 +118,6 @@ echo-messaging/
 │   └── workflows/
 │       └── deploy.yml          # CI/CD pipeline
 ├── docker-compose.yml          # Production compose
-├── docker-compose.staging.yml  # Staging compose
 ├── docker-compose.local.yml    # Local development compose
 ├── .env                        # Environment variables (not committed)
 └── README.md
@@ -128,24 +127,23 @@ echo-messaging/
 
 ## 🔄 CI/CD Pipeline
 
-Automated via GitHub Actions (`deploy.yml`). Branch-based routing to isolated environments.
+Automated via GitHub Actions (`deploy.yml`). Pushes to `main` trigger build and deploy.
 
 ```
 ┌──────────────┐     ┌───────────────────┐     ┌──────────────────────────┐
-│  Push to     │────▶│  Build & Push      │────▶│  Deploy to Environment   │
-│  main/staging│     │  Docker Images     │     │  (branch-conditional)    │
+│  Push to     │────▶│  Build & Push      │────▶│  Deploy to Production    │
+│  main        │     │  Docker Images     │     │  EC2 (Amazon Linux)      │
 └──────────────┘     └───────────────────┘     └──────────────────────────┘
 ```
 
-| Branch     | Environment | EC2 OS             | Backend Port | Frontend Port | URL |
-|------------|-------------|--------------------|:------------:|:-------------:|:----|
-| `main`     | Production  | Amazon Linux 2023  | 8080         | 5173          | http://35.154.154.82:5173/ |
-| `staging`  | Staging     | Ubuntu             | 8081         | 5174          | http://13.201.223.130:5174/ |
+| Branch | Environment | EC2 OS            | Backend Port | Frontend Port | URL                                  |
+|--------|-------------|-------------------|:------------:|:-------------:|:-------------------------------------|
+| `main` | Production  | Amazon Linux 2023 | 8080         | 5173          | https://echomessaging.duckdns.org    |
 
 **Flow:**
 
-1. **Build** — Docker images tagged `latest` (prod) or `staging`, pushed to Docker Hub
-2. **Deploy** — SSH into target EC2, pull images, recreate containers with `docker compose`
+1. **Build** — Docker images tagged `latest`, pushed to Docker Hub
+2. **Deploy** — SSH into EC2, pull images, recreate containers with `docker compose`
 3. **Verify** — Health check via `/actuator/health`
 
 ---
@@ -183,5 +181,3 @@ Automated via GitHub Actions (`deploy.yml`). Branch-based routing to isolated en
 
 This project is unlicensed — all rights reserved.
 
-
-major change
