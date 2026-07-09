@@ -32,7 +32,7 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Value("${allowed-origins:http://localhost:5173}")
+    @Value("${ALLOWED_ORIGINS:https://echomessaging.duckdns.org,http://localhost:5173}")
     private String allowedOrigins;
 
     @Bean
