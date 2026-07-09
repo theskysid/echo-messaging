@@ -55,22 +55,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        userId = jwtService.extractUserId(jwtToken);
+        try {
+            userId = jwtService.extractUserId(jwtToken);
 
-        if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var userDetails = userRepository.findById(userId).orElse(null);
 
-            var userDetails = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+                if (userDetails != null && jwtService.isTokenValid(jwtToken, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                            userDetails.getUsername(), null, Collections.emptyList());
 
-            if (jwtService.isTokenValid(jwtToken, userDetails)) {
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails.getUsername(), null, Collections.emptyList());
-
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
             }
-
+        } catch (Exception e) {
+            // Ignore invalid, expired, or stale tokens so the request can proceed as unauthenticated
         }
 
         filterChain.doFilter(request, response);

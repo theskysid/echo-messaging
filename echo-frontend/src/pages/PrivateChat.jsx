@@ -8,7 +8,8 @@ const PrivateChat = ({
                          stompClient,
                          onClose,
                          registerPrivateMessageHandler,
-                         unregisterPrivateMessageHandler
+                         unregisterPrivateMessageHandler,
+                         isEmbedded = true
                      }) => {
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState('');
@@ -144,7 +145,7 @@ const PrivateChat = ({
 
     if (isLoading) {
         return (
-            <div className="private-chat-window">
+            <div className={`private-chat-window ${isEmbedded ? 'embedded' : ''}`}>
                 <div className="private-chat-header">
                     <h3>💬 {recipientUser}</h3>
                     <button onClick={onClose} className="close-btn">✕</button>
@@ -155,7 +156,7 @@ const PrivateChat = ({
     }
 
     return (
-        <div className="private-chat-window">
+        <div className={`private-chat-window ${isEmbedded ? 'embedded' : ''}`}>
             <div className="private-chat-header">
                 <div className="recipient-info">
                     <div className="recipient-avatar">

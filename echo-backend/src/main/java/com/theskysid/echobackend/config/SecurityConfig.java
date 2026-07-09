@@ -41,9 +41,16 @@ public class SecurityConfig {
                 .headers(header -> header.frameOptions(frameOption -> frameOption.disable()))
                 .cors(cors -> cors.configurationSource(addConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(
+                                "/auth/login",
+                                "/auth/signup",
+                                "/auth/signup/verify",
+                                "/auth/email-otp/**",
+                                "/auth/phone-otp/**",
+                                "/auth/google/**")
+                        .permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers("/api/**").permitAll()
+                        .requestMatchers("/auth/getonlineusers", "/auth/getcurrentuser", "/api/**").authenticated()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated())
