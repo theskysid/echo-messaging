@@ -34,6 +34,9 @@ const Navbar = () =>{
                             <Link to="/chatarea" className="navbar-link">
                                 Chat area
                             </Link>
+                            <Link to="/profile" className="navbar-link">
+                                Profile
+                            </Link>
                             <div className="navbar-user">
                                 <span className="user-info">
                                     Welcome, {currentUser.username }

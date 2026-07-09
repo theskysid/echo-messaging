@@ -137,10 +137,10 @@ Automated via GitHub Actions (`deploy.yml`). Branch-based routing to isolated en
 └──────────────┘     └───────────────────┘     └──────────────────────────┘
 ```
 
-| Branch     | Environment | EC2 OS             | Backend Port | Frontend Port |
-|------------|-------------|--------------------|:------------:|:-------------:|
-| `main`     | Production  | Amazon Linux 2023  | 8080         | 5173          |
-| `staging`  | Staging     | Ubuntu             | 8081         | 5174          |
+| Branch     | Environment | EC2 OS             | Backend Port | Frontend Port | URL |
+|------------|-------------|--------------------|:------------:|:-------------:|:----|
+| `main`     | Production  | Amazon Linux 2023  | 8080         | 5173          | http://35.154.154.82:5173/ |
+| `staging`  | Staging     | Ubuntu             | 8081         | 5174          | http://13.201.223.130:5174/ |
 
 **Flow:**
 

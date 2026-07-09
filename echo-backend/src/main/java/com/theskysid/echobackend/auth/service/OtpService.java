@@ -3,9 +3,6 @@ package com.theskysid.echobackend.auth.service;
 import com.theskysid.echobackend.auth.otp.entity.OtpVerification;
 import com.theskysid.echobackend.auth.otp.entity.OtpVerification.IdentifierType;
 import com.theskysid.echobackend.auth.otp.repository.OtpVerificationRepository;
-import com.theskysid.echobackend.user.entity.AuthProvider;
-import com.theskysid.echobackend.user.entity.User;
-import com.theskysid.echobackend.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,9 +15,6 @@ public class OtpService {
 
     @Autowired
     private OtpVerificationRepository otpRepository;
-
-    @Autowired
-    private UserRepository userRepository;
 
     @Value("${otp.expiry-minutes:5}")
     private int otpExpiryMinutes;
@@ -38,24 +32,10 @@ public class OtpService {
     }
 
     public String createOrUpdateForEmail(String email) {
-        userRepository.findByEmail(email).orElseGet(() -> {
-            User u = new User();
-            u.setEmail(email);
-            u.setUsername(email);
-            u.setAuthProvider(AuthProvider.EMAIL);
-            return userRepository.save(u);
-        });
         return generateAndSaveOtp(email, IdentifierType.EMAIL);
     }
 
     public String createOrUpdateForPhone(String phone) {
-        userRepository.findByPhone(phone).orElseGet(() -> {
-            User u = new User();
-            u.setPhone(phone);
-            u.setUsername(phone);
-            u.setAuthProvider(AuthProvider.PHONE);
-            return userRepository.save(u);
-        });
         return generateAndSaveOtp(phone, IdentifierType.PHONE);
     }
 
@@ -114,5 +94,4 @@ public class OtpService {
 
     }
 }
-
 

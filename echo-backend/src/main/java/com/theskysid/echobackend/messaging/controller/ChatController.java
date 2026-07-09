@@ -1,5 +1,7 @@
 package com.theskysid.echobackend.messaging.controller;
 
+import com.theskysid.echobackend.auth.service.OnlineUserService;
+import com.theskysid.echobackend.auth.util.IdentifierNormalizer;
 import com.theskysid.echobackend.messaging.entity.ChatMessage;
 import com.theskysid.echobackend.messaging.repository.ChatMessageRepository;
 import com.theskysid.echobackend.user.service.UserService;
@@ -25,34 +27,40 @@ public class ChatController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Autowired
+    private OnlineUserService onlineUserService;
+
     //first the hit endpoint is checked in the config then accordingly it hits the specific methods
 
     @MessageMapping("/chat.addUser")
     @SendTo("/topic/public") //automatic broadcasting to all the users
     public ChatMessage addUser(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) {
+        String username = IdentifierNormalizer.normalizeUsername(chatMessage.getSender());
+        String sessionId = headerAccessor.getSessionId();
 
-        if (!userService.userExists(chatMessage.getSender())) {
+        if (username.isBlank() || !userService.userExists(username)) {
             return null;
         }
 
-        // Store username in WebSocket session
-        headerAccessor.getSessionAttributes()
-                      .put("username", chatMessage.getSender());
+        if (headerAccessor.getSessionAttributes() != null) {
+            headerAccessor.getSessionAttributes().put("username", username);
+        }
 
+        boolean shouldBroadcastJoin = onlineUserService.registerSession(username, sessionId);
+        if (!shouldBroadcastJoin) {
+            return null;
+        }
 
-        // Set JOIN type explicitly (safety)
+        chatMessage.setSender(username);
+
         chatMessage.setType(ChatMessage.MessageType.JOIN);
-
-        // Set timestamp
         chatMessage.setTimestamp(LocalDateTime.now());
 
-        // Ensure content not null
         if (chatMessage.getContent() == null) {
             chatMessage.setContent("");
         }
 
-        // Do NOT save to DB
-        return chatMessage; // broadcast only
+        return chatMessage;
     }
 
     @MessageMapping("/chat.sendMessage")

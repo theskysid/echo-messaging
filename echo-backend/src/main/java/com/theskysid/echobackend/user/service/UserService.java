@@ -15,10 +15,10 @@ public class UserService {
     private OnlineUserService onlineUserService;
 
     public boolean userExists(String username) {
-        return userRepository.existsByUsername(username);
+        return userRepository.findByUsernameIgnoreCase(username).isPresent();
     }
 
-    public boolean isUserOnline(Long userId) {
-        return onlineUserService.isOnline(userId);
+    public boolean isUserOnline(String username) {
+        return onlineUserService.isOnline(username);
     }
 }
