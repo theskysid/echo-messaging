@@ -25,13 +25,21 @@ const useSocket = ({
     const typingTimeoutRef = useRef(null);
     const reconnectTimeoutRef = useRef(null);
     const isMountedRef = useRef(true);
+    const isInitialScrollRef = useRef(true);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const scrollToBottom = (behavior = "smooth") => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
     };
 
     useEffect(() => {
-        scrollToBottom();
+        if (isInitialScrollRef.current && messages.length > 0) {
+            isInitialScrollRef.current = false;
+            scrollToBottom("auto");
+            const timer = setTimeout(() => scrollToBottom("auto"), 50);
+            return () => clearTimeout(timer);
+        } else {
+            scrollToBottom("smooth");
+        }
     }, [messages, isTyping]);
 
     useEffect(() => {

@@ -16,13 +16,21 @@ const PrivateChat = ({
     const [isLoading, setIsLoading] = useState(true);
     const messagesEndRef = useRef(null);
     const messageIdsRef = useRef(new Set());
+    const isInitialScrollRef = useRef(true);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const scrollToBottom = (behavior = "smooth") => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
     };
 
     useEffect(() => {
-        scrollToBottom();
+        if (isInitialScrollRef.current && messages.length > 0) {
+            isInitialScrollRef.current = false;
+            scrollToBottom("auto");
+            const timer = setTimeout(() => scrollToBottom("auto"), 50);
+            return () => clearTimeout(timer);
+        } else {
+            scrollToBottom("smooth");
+        }
     }, [messages]);
 
     const createMessageId = (msg) => {
@@ -52,6 +60,7 @@ const PrivateChat = ({
 
     useEffect(() => {
         let isMounted = true;
+        isInitialScrollRef.current = true;
 
         const loadMessageHistory = async () => {
             try {
@@ -135,9 +144,14 @@ const PrivateChat = ({
     };
 
     const formatTime = (timestamp) => {
-        return new Date(timestamp).toLocaleTimeString('en-US', {
-            timeZone: 'Asia/Kolkata',
-            hour12: false,
+        if (!timestamp) return '';
+        let ts = timestamp;
+        if (typeof ts === 'string' && !ts.endsWith('Z') && !ts.includes('+') && !ts.includes('GMT')) {
+            ts += 'Z';
+        }
+        const dateObj = new Date(ts);
+        if (isNaN(dateObj.getTime())) return '';
+        return dateObj.toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'
         });

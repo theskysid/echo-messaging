@@ -29,6 +29,7 @@ const GlobalChat = ({ chat, ui, layout }) => {
                     <div className="mobile-header-left">
                         {onBack && (
                             <button
+                                type="button"
                                 onClick={onBack}
                                 className="mobile-back-button"
                                 aria-label="Back to contacts list"

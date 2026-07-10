@@ -105,6 +105,19 @@ const MobileLayout = ({ chat, friends, notifications, ui, layout }) => {
                     {/* ── Chat List ── */}
                     <div className="tg-chat-list" ref={chatListScrollRef}>
 
+                        {/* Friends */}
+                        {friendsList.length === 0 ? (
+                            <div className="tg-empty-state">
+                                <div className="tg-empty-icon">👥</div>
+                                <p>No friends yet.</p>
+                                <button className="tg-empty-add-btn" onClick={() => setShowFindFriendsModal(true)}>
+                                    Find Friends
+                                </button>
+                            </div>
+                        ) : (
+                            <FriendList chat={chat} friends={friends} ui={ui} layout={layout} mobile={true} />
+                        )}
+
                         {/* Pinned Global Chat — always visible */}
                         {true && (
                             <div
@@ -138,19 +151,6 @@ const MobileLayout = ({ chat, friends, notifications, ui, layout }) => {
                                     </div>
                                 </div>
                             </div>
-                        )}
-
-                        {/* Friends */}
-                        {friendsList.length === 0 ? (
-                            <div className="tg-empty-state">
-                                <div className="tg-empty-icon">👥</div>
-                                <p>No friends yet.</p>
-                                <button className="tg-empty-add-btn" onClick={() => setShowFindFriendsModal(true)}>
-                                    Find Friends
-                                </button>
-                            </div>
-                        ) : (
-                            <FriendList chat={chat} friends={friends} ui={ui} layout={layout} mobile={true} />
                         )}
                     </div>
 

@@ -32,7 +32,32 @@ const ChatArea = () => {
 
     // Responsive Mobile State
     const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
-    const [mobileActiveView, setMobileActiveView] = useState('list'); // 'list' | 'global' | 'dm'
+    const [mobileActiveViewRaw, setMobileActiveViewRaw] = useState('list'); // 'list' | 'global' | 'dm'
+
+    const setMobileActiveView = useCallback((newView) => {
+        setMobileActiveViewRaw(newView);
+        if (newView === 'global' || newView === 'dm') {
+            window.history.pushState({ mobileView: newView }, '', `#${newView}`);
+        } else if (newView === 'list' && (window.location.hash === '#global' || window.location.hash === '#dm')) {
+            window.history.back();
+        }
+    }, []);
+
+    const mobileActiveView = mobileActiveViewRaw;
+
+    useEffect(() => {
+        const handlePopState = () => {
+            if (!window.location.hash || (window.location.hash !== '#global' && window.location.hash !== '#dm')) {
+                setMobileActiveViewRaw('list');
+            } else if (window.location.hash === '#global') {
+                setMobileActiveViewRaw('global');
+            } else if (window.location.hash === '#dm') {
+                setMobileActiveViewRaw('dm');
+            }
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
     useEffect(() => {
         const handleResize = () => {
@@ -178,9 +203,14 @@ const ChatArea = () => {
 
 
     const formatTime = (timestamp) => {
-        return new Date(timestamp).toLocaleTimeString('en-US', {
-            timeZone: 'Asia/Kolkata',
-            hour12: false,
+        if (!timestamp) return '';
+        let ts = timestamp;
+        if (typeof ts === 'string' && !ts.endsWith('Z') && !ts.includes('+') && !ts.includes('GMT')) {
+            ts += 'Z';
+        }
+        const dateObj = new Date(ts);
+        if (isNaN(dateObj.getTime())) return '';
+        return dateObj.toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'
         });

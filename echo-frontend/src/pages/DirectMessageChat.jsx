@@ -26,13 +26,21 @@ const DirectMessageChat = ({
     const messagesEndRef = useRef(null);
     const messageIdsRef = useRef(new Set());
     const typingTimeoutRef = useRef(null);
+    const isInitialScrollRef = useRef(true);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (behavior = 'smooth') => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
     };
 
     useEffect(() => {
-        scrollToBottom();
+        if (isInitialScrollRef.current && messages.length > 0) {
+            isInitialScrollRef.current = false;
+            scrollToBottom('auto');
+            const timer = setTimeout(() => scrollToBottom('auto'), 50);
+            return () => clearTimeout(timer);
+        } else {
+            scrollToBottom('smooth');
+        }
     }, [messages, isTyping]);
 
     useEffect(() => {
@@ -75,6 +83,7 @@ const DirectMessageChat = ({
 
     useEffect(() => {
         let isMounted = true;
+        isInitialScrollRef.current = true;
 
         const initConversation = async () => {
             setIsLoading(true);
@@ -188,9 +197,21 @@ const DirectMessageChat = ({
         }
     };
 
+    const normalizeTimestamp = (ts) => {
+        if (!ts) return '';
+        let str = typeof ts === 'string' ? ts : ts.toString();
+        if (typeof str === 'string' && !str.endsWith('Z') && !str.includes('+') && !str.includes('GMT')) {
+            str += 'Z';
+        }
+        return str;
+    };
+
     const formatTime = (timestamp) => {
         if (!timestamp) return '';
-        return new Date(timestamp).toLocaleTimeString([], {
+        const normalized = normalizeTimestamp(timestamp);
+        const dateObj = new Date(normalized);
+        if (isNaN(dateObj.getTime())) return '';
+        return dateObj.toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'
         });
@@ -198,7 +219,8 @@ const DirectMessageChat = ({
 
     const formatExpiryDelta = (expiresAt) => {
         if (!expiresAt) return '';
-        const diffMs = new Date(expiresAt) - new Date();
+        const normalized = normalizeTimestamp(expiresAt);
+        const diffMs = new Date(normalized) - new Date();
         if (diffMs <= 0) return 'Expired';
         const hours = Math.floor(diffMs / (1000 * 60 * 60));
         const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
@@ -217,7 +239,7 @@ const DirectMessageChat = ({
             <div className="dm-chat-header">
                 <div className="dm-recipient-info">
                     {onBack && (
-                        <button onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
+                        <button type="button" onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
                             ←
                         </button>
                     )}
@@ -237,7 +259,7 @@ const DirectMessageChat = ({
             <div className="dm-chat-header">
                 <div className="dm-recipient-info">
                     {onBack && (
-                        <button onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
+                        <button type="button" onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
                             ←
                         </button>
                     )}
@@ -264,7 +286,7 @@ const DirectMessageChat = ({
             <div className="dm-chat-header">
                 <div className="dm-recipient-info">
                     {onBack && (
-                        <button onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
+                        <button type="button" onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
                             ←
                         </button>
                     )}
@@ -322,7 +344,7 @@ const DirectMessageChat = ({
                                 </div>
                                 <div className="dm-message-content">{msg.content}</div>
                                 {index === 0 && msg.expiresAt && (
-                                    <div className="dm-message-footer" title={`Top message expires at ${new Date(msg.expiresAt).toLocaleString()}`}>
+                                    <div className="dm-message-footer" title={`Top message expires at ${new Date(normalizeTimestamp(msg.expiresAt)).toLocaleString()}`}>
                                         ⏳ {formatExpiryDelta(msg.expiresAt)}
                                     </div>
                                 )}
