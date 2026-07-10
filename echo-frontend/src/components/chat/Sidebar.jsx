@@ -1,30 +1,139 @@
-import UserItem from './UserItem';
+import React from 'react';
+import FriendList from './FriendList';
 
-const Sidebar = ({ onlineUsers, currentUser, userColor, unreadMessages, onOpenChat }) => {
-    const usersList = Array.from(onlineUsers);
+const Sidebar = ({ chat, friends, ui, layout }) => {
+    const { openChats = [], setOpenChats, onlineUsers = new Set(), openDmChat, unreadDms = new Map() } = chat || {};
+    const {
+        friendsList = [],
+        incomingRequestsCount = 0,
+        isSidebarRefreshing,
+        loadFriendsData,
+        removingFriendId,
+        contextMenuFriendId,
+        setContextMenuFriendId,
+        handleRemoveFriend
+    } = friends || {};
+    const {
+        showGlobalChat,
+        setShowGlobalChat,
+        sidebarTab,
+        setSidebarTab,
+        setShowFindFriendsModal,
+        longPressTimerRef,
+        isLongPressTriggeredRef,
+        username,
+        userColor
+    } = ui || {};
+    const { mobileSidebarOpen, setMobileSidebarOpen } = layout || {};
 
     return (
-        <aside className="chat-sidebar">
+        <div className={`sidebar ${mobileSidebarOpen ? 'sidebar-mobile-open' : ''}`}>
             <div className="sidebar-header">
-                <h3 className="sidebar-title">
-                    <span className="sidebar-title-icon">👥</span>
-                    Online
-                </h3>
-                <span className="sidebar-count">{usersList.length}</span>
+                <h3>Users & Friends</h3>
+                <div className="sidebar-header-actions">
+                    <button
+                        onClick={() => loadFriendsData(true)}
+                        className={`sidebar-refresh-icon ${isSidebarRefreshing ? 'spin' : ''}`}
+                        title="Live Refresh Friends & Requests"
+                    >
+                        🔄
+                    </button>
+                    <button
+                        className="sidebar-close-mobile"
+                        onClick={() => setMobileSidebarOpen(false)}
+                    >
+                        ✕
+                    </button>
+                </div>
             </div>
-            <div className="sidebar-users">
-                {usersList.map(user => (
-                    <UserItem
-                        key={user}
-                        user={user}
-                        currentUser={currentUser}
-                        userColor={userColor}
-                        unreadCount={unreadMessages.get(user) || 0}
-                        onOpenChat={onOpenChat}
-                    />
-                ))}
+
+            {!showGlobalChat && (
+                <button
+                    onClick={() => {
+                        setShowGlobalChat(true);
+                        if (openChats.length >= 3) {
+                            setOpenChats(prev => prev.slice(prev.length - 2));
+                        }
+                    }}
+                    className="open-global-chat-btn"
+                >
+                    + Open Global Chat
+                </button>
+            )}
+
+            <div className="sidebar-tabs">
+                <button
+                    className={`sidebar-tab-btn ${sidebarTab === 'friends' ? 'active' : ''}`}
+                    onClick={() => setSidebarTab('friends')}
+                >
+                    👥 Friends
+                    {incomingRequestsCount > 0 && (
+                        <span className="unread-count" style={{ marginLeft: '6px' }}>{incomingRequestsCount}</span>
+                    )}
+                </button>
+                <button
+                    className={`sidebar-tab-btn ${sidebarTab === 'users' ? 'active' : ''}`}
+                    onClick={() => setSidebarTab('users')}
+                >
+                    🌐 Global Users
+                </button>
             </div>
-        </aside>
+
+            <div className="users-list">
+                {sidebarTab === 'friends' ? (
+                    <>
+                        <button
+                            className="add-friend-trigger-btn"
+                            onClick={() => setShowFindFriendsModal(true)}
+                        >
+                            🔍 Find / Add Friends
+                            {incomingRequestsCount > 0 && (
+                                <span className="unread-count">{incomingRequestsCount}</span>
+                            )}
+                        </button>
+
+                        {friendsList.length === 0 ? (
+                            <div className="friends-empty-hint">
+                                No friends added yet. Click above to search and add friends!
+                            </div>
+                        ) : (
+                            <FriendList chat={chat} friends={friends} ui={ui} layout={layout} mobile={false} />
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <div className="global-users-hint">
+                            Private chat is available only from the Friends tab.
+                        </div>
+                        {Array.from(onlineUsers).map(user => {
+                            const isFriend = friendsList.some((friend) => friend.username === user);
+                            return (
+                                <div
+                                    key={user}
+                                    className={`user-item ${user === username ? 'current-user' : ''} ${isFriend ? 'friend-user-item' : ''}`}
+                                    onClick={() => {
+                                        if (isFriend && user !== username) {
+                                            openDmChat(user);
+                                        }
+                                    }}
+                                >
+                                    <div className="user-avatar" style={{ backgroundColor: user === username ? userColor : '#007bff' }}>
+                                        {user.charAt(0).toUpperCase()}
+                                    </div>
+                                    <span>{user}</span>
+                                    {user === username && <span className="you-label">(You)</span>}
+                                    {user !== username && (
+                                        <span className="global-user-tag">
+                                            {isFriend ? 'Friend' : 'Global'}
+                                        </span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </>
+                )}
+            </div>
+        </div>
     );
 };
 

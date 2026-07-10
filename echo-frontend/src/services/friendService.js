@@ -18,10 +18,10 @@ export const friendService = {
     },
 
     /**
-     * Get pending outgoing friend requests
+     * Get rejected friend requests
      */
-    getOutgoingRequests: async () => {
-        const response = await api.get('/api/friends/requests/outgoing');
+    getRejectedRequests: async () => {
+        const response = await api.get('/api/friends/requests/rejected');
         return response.data;
     },
 

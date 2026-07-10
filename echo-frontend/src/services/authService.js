@@ -13,6 +13,25 @@ export const api = axios.create({
     withCredentials: true // Important for handling cookies cross-origin
 });
 
+// Request interceptor to attach JWT token if present
+api.interceptors.request.use(
+    (config) => {
+        const currentUserStr = localStorage.getItem('currentUser') || localStorage.getItem('user');
+        if (currentUserStr) {
+            try {
+                const userData = JSON.parse(currentUserStr);
+                if (userData && userData.token) {
+                    config.headers.Authorization = `Bearer ${userData.token}`;
+                }
+            } catch (e) {
+                // ignore parsing error
+            }
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
 // Response interceptor for global error handling
 api.interceptors.response.use(
     (response) => response,

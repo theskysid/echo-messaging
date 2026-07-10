@@ -76,17 +76,28 @@ public class FriendshipController {
     }
 
     /**
-     * GET /api/friends/requests/outgoing — list pending outgoing requests
+     * GET /api/friends/requests/rejected — list rejected requests
      */
-    @GetMapping("/requests/outgoing")
+    @GetMapping("/requests/rejected")
     @Transactional(readOnly = true)
-    public ResponseEntity<?> getOutgoingRequests(Authentication authentication) {
+    public ResponseEntity<?> getRejectedRequests(Authentication authentication) {
         if (authentication == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
         }
         User currentUser = authenticationService.resolveAuthenticatedUser(authentication.getName());
-        List<FriendshipDTO> requests = friendshipService.getOutgoingRequests(currentUser).stream()
-                .map(this::toFriendshipDTO)
+        List<FriendshipDTO> requests = friendshipService.getRejectedRequests(currentUser).stream()
+                .map(friendship -> {
+                    User otherUser = friendship.getRequester().getId().equals(currentUser.getId())
+                            ? friendship.getAddressee()
+                            : friendship.getRequester();
+                    return FriendshipDTO.builder()
+                            .id(friendship.getId())
+                            .requesterUsername(currentUser.getUsername())
+                            .addresseeUsername(otherUser.getUsername())
+                            .status(friendship.getStatus().name())
+                            .createdAt(friendship.getCreatedAt())
+                            .build();
+                })
                 .collect(Collectors.toList());
         return ResponseEntity.ok(requests);
     }

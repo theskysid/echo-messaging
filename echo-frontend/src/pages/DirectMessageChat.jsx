@@ -7,10 +7,12 @@ const DirectMessageChat = ({
     recipientUsername,
     stompClient,
     onClose,
+    onBack,
     registerDmHandler,
     unregisterDmHandler,
     positionOffset = 380,
-    isEmbedded = true
+    isEmbedded = true,
+    isMobile = false
 }) => {
     const [conversation, setConversation] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -212,13 +214,18 @@ const DirectMessageChat = ({
     if (isLoading) {
         return (
             <div className={`dm-chat-window ${isEmbedded ? 'embedded' : ''}`} style={isEmbedded ? {} : { right: `${positionOffset}px` }}>
-                <div className="dm-chat-header">
-                    <div className="dm-recipient-info">
-                        <div className="dm-avatar">💬</div>
-                        <h3>{recipientUsername}</h3>
-                    </div>
-                    <button onClick={onClose} className="dm-close-btn">✕</button>
+            <div className="dm-chat-header">
+                <div className="dm-recipient-info">
+                    {onBack && (
+                        <button onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
+                            ←
+                        </button>
+                    )}
+                    <div className="dm-avatar">💬</div>
+                    <h3>{recipientUsername}</h3>
                 </div>
+                <button onClick={onClose} className="dm-close-btn">✕</button>
+            </div>
                 <div className="dm-loading">⏳ Opening secure DM...</div>
             </div>
         );
@@ -227,13 +234,18 @@ const DirectMessageChat = ({
     if (error) {
         return (
             <div className={`dm-chat-window ${isEmbedded ? 'embedded' : ''}`} style={isEmbedded ? {} : { right: `${positionOffset}px` }}>
-                <div className="dm-chat-header">
-                    <div className="dm-recipient-info">
-                        <div className="dm-avatar">✕</div>
-                        <h3>{recipientUsername}</h3>
-                    </div>
-                    <button onClick={onClose} className="dm-close-btn">✕</button>
+            <div className="dm-chat-header">
+                <div className="dm-recipient-info">
+                    {onBack && (
+                        <button onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
+                            ←
+                        </button>
+                    )}
+                    <div className="dm-avatar">✕</div>
+                    <h3>{recipientUsername}</h3>
                 </div>
+                <button onClick={onClose} className="dm-close-btn">✕</button>
+            </div>
                 <div className="dm-loading" style={{ color: '#d32f2f' }}>
                     <p>⚠️ {error}</p>
                     <button
@@ -251,6 +263,11 @@ const DirectMessageChat = ({
         <div className={`dm-chat-window ${isEmbedded ? 'embedded' : ''}`} style={isEmbedded ? {} : { right: `${positionOffset}px` }}>
             <div className="dm-chat-header">
                 <div className="dm-recipient-info">
+                    {onBack && (
+                        <button onClick={onBack} className="mobile-back-button dm-back-btn" aria-label="Back to contacts list">
+                            ←
+                        </button>
+                    )}
                     <div className="dm-avatar-wrapper">
                         <div className="dm-avatar">
                             {recipientUsername.charAt(0).toUpperCase()}
@@ -276,7 +293,7 @@ const DirectMessageChat = ({
                         <option value="ONE_DAY">🕒 1 Day</option>
                         <option value="SEVEN_DAYS">📅 7 Days</option>
                     </select>
-                    <button onClick={onClose} className="dm-close-btn" title="Close Chat">✕</button>
+                    {!onBack && <button onClick={onClose} className="dm-close-btn" title="Close Chat">✕</button>}
                 </div>
             </div>
 
@@ -333,7 +350,7 @@ const DirectMessageChat = ({
                         maxLength={500}
                     />
                     <button type="submit" disabled={!messageInput.trim()} className="dm-send-btn" title="Send Ephemeral Message">
-                        📤
+                        Send
                     </button>
                 </form>
             </div>

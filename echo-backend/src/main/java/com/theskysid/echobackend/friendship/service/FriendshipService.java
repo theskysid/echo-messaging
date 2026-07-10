@@ -80,6 +80,7 @@ public class FriendshipService {
                 .build();
 
         Friendship saved = friendshipRepository.save(friendship);
+        friendshipRepository.flush();
         sendFriendEvent(requester, "FRIEND_REQUEST_SENT", addressee.getUsername());
         sendFriendEvent(addressee, "FRIEND_REQUEST_RECEIVED", requester.getUsername());
         return saved;
@@ -103,6 +104,7 @@ public class FriendshipService {
 
         friendship.setStatus(FriendshipStatus.ACCEPTED);
         Friendship saved = friendshipRepository.save(friendship);
+        friendshipRepository.flush();
         sendFriendEvent(friendship.getRequester(), "FRIEND_REQUEST_ACCEPTED", friendship.getAddressee().getUsername());
         sendFriendEvent(friendship.getAddressee(), "FRIEND_REQUEST_ACCEPTED_BY_YOU", friendship.getRequester().getUsername());
         return saved;
@@ -126,18 +128,34 @@ public class FriendshipService {
 
         friendship.setStatus(FriendshipStatus.REJECTED);
         Friendship saved = friendshipRepository.save(friendship);
+        friendshipRepository.flush();
         sendFriendEvent(friendship.getRequester(), "FRIEND_REQUEST_REJECTED", friendship.getAddressee().getUsername());
         sendFriendEvent(friendship.getAddressee(), "FRIEND_REQUEST_REJECTED_BY_YOU", friendship.getRequester().getUsername());
         return saved;
     }
 
     /**
-     * Cancel an outgoing friend request. Only the requester can cancel.
+     * Cancel an outgoing friend request or remove from rejected list.
      */
     @Transactional
     public void cancelFriendRequest(User currentUser, Long friendshipId) {
         Friendship friendship = friendshipRepository.findById(friendshipId)
                 .orElseThrow(() -> new RuntimeException("Friend request not found"));
+
+        if (friendship.getStatus() == FriendshipStatus.REJECTED) {
+            boolean isParticipant = friendship.getRequester().getId().equals(currentUser.getId())
+                    || friendship.getAddressee().getId().equals(currentUser.getId());
+            if (!isParticipant) {
+                throw new RuntimeException("You are not part of this request");
+            }
+            User uA = friendship.getRequester();
+            User uB = friendship.getAddressee();
+            friendshipRepository.delete(friendship);
+            friendshipRepository.flush();
+            sendFriendEvent(uA, "FRIEND_REQUEST_CANCELLED", uB.getUsername());
+            sendFriendEvent(uB, "FRIEND_REQUEST_CANCELLED", uA.getUsername());
+            return;
+        }
 
         if (!friendship.getRequester().getId().equals(currentUser.getId())) {
             throw new RuntimeException("Only the sender can cancel a friend request");
@@ -150,6 +168,7 @@ public class FriendshipService {
         User uA = friendship.getRequester();
         User uB = friendship.getAddressee();
         friendshipRepository.delete(friendship);
+        friendshipRepository.flush();
         sendFriendEvent(uA, "FRIEND_REQUEST_CANCELLED_BY_YOU", uB.getUsername());
         sendFriendEvent(uB, "FRIEND_REQUEST_CANCELLED", uA.getUsername());
     }
@@ -176,6 +195,7 @@ public class FriendshipService {
         User uA = friendship.getRequester();
         User uB = friendship.getAddressee();
         friendshipRepository.delete(friendship);
+        friendshipRepository.flush();
         sendFriendEvent(uA, "FRIEND_REMOVED", uB.getUsername());
         sendFriendEvent(uB, "FRIEND_REMOVED", uA.getUsername());
     }
@@ -202,11 +222,11 @@ public class FriendshipService {
     }
 
     /**
-     * Get all pending outgoing requests for the current user.
+     * Get all rejected requests for the current user.
      */
     @Transactional(readOnly = true)
-    public List<Friendship> getOutgoingRequests(User user) {
-        return friendshipRepository.findByRequesterAndStatus(user, FriendshipStatus.PENDING);
+    public List<Friendship> getRejectedRequests(User user) {
+        return friendshipRepository.findRejectedRequests(user);
     }
 
     /**

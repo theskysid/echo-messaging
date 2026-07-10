@@ -26,10 +26,10 @@ public interface FriendshipRepository extends JpaRepository<Friendship, Long> {
     List<Friendship> findByAddresseeAndStatus(@Param("addressee") User addressee, @Param("status") FriendshipStatus status);
 
     /**
-     * Find pending requests where the user is the requester (outgoing requests).
+     * Find rejected requests where the user is either the requester or addressee.
      */
-    @Query("SELECT f FROM Friendship f JOIN FETCH f.requester JOIN FETCH f.addressee WHERE f.requester = :requester AND f.status = :status")
-    List<Friendship> findByRequesterAndStatus(@Param("requester") User requester, @Param("status") FriendshipStatus status);
+    @Query("SELECT f FROM Friendship f JOIN FETCH f.requester JOIN FETCH f.addressee WHERE (f.requester = :user OR f.addressee = :user) AND f.status = 'REJECTED'")
+    List<Friendship> findRejectedRequests(@Param("user") User user);
 
     /**
      * Check if any friendship row exists between two users in either direction.

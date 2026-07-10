@@ -151,7 +151,7 @@ public class AuthenticationService {
                 .secure(secureCookie)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .build();
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -235,9 +235,12 @@ public class AuthenticationService {
     }
 
     private LoginResponseDTO issueLoginResponse(User user) {
+        String token = jwtService.generateToken(user);
+        UserDTO userDTO = convertToUserDTO(user);
+        userDTO.setToken(token);
         return LoginResponseDTO.builder()
-                .token(jwtService.generateToken(user))
-                .userDTO(convertToUserDTO(user))
+                .token(token)
+                .userDTO(userDTO)
                 .build();
     }
 

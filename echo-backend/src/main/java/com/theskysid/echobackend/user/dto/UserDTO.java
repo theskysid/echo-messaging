@@ -14,5 +14,5 @@ public class UserDTO {
     private String googleId;
     private String authProvider;
     private boolean isOnline;
-
+    private String token;
 }

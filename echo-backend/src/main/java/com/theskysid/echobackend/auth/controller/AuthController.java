@@ -30,7 +30,7 @@ public class AuthController {
     @Autowired
     private UserRepository userRepository;
 
-    @Value("${app.secure-cookie:true}")
+    @Value("${app.secure-cookie:false}")
     private boolean secureCookie;
 
     @PostMapping("/signup")
@@ -46,7 +46,7 @@ public class AuthController {
                 .secure(secureCookie)
                 .path("/")
                 .maxAge(60 * 60)
-                .sameSite("strict")
+                .sameSite("Lax")
                 .build();
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
@@ -62,7 +62,7 @@ public class AuthController {
                     .secure(secureCookie)
                     .path("/")
                     .maxAge(60 * 60)
-                    .sameSite("Strict")
+                    .sameSite("Lax")
                     .build();
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, responseCookie.toString())
