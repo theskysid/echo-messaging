@@ -14,13 +14,13 @@ A real-time chat application with public group messaging, private conversations,
 
 ## 🛠️ Tech Stack
 
-| Layer          | Technologies                                              |
-|----------------|-----------------------------------------------------------|
-| **Backend**    | Spring Boot, Java 21, JPA, WebSocket (STOMP/SockJS), JWT  |
-| **Frontend**   | React, Vite, Axios, SockJS, STOMP.js                      |
-| **Database**   | PostgreSQL 16                                              |
-| **Auth**       | Password, Email OTP, Phone OTP (Twilio), Google OAuth2     |
-| **Infra**      | Docker, Docker Compose, GitHub Actions, AWS EC2            |
+| Layer        | Technologies                                             |
+|--------------|----------------------------------------------------------|
+| **Backend**  | Spring Boot, Java 21, JPA, WebSocket (STOMP/SockJS), JWT |
+| **Frontend** | React, Vite, Axios, SockJS, STOMP.js                     |
+| **Database** | PostgreSQL 16                                            |
+| **Auth**     | Password, Email OTP, Phone OTP (Twilio), Google OAuth2   |
+| **Infra**    | Docker, Docker Compose, GitHub Actions, AWS EC2          |
 
 ---
 
@@ -52,11 +52,11 @@ Create a `.env` file in the project root (see [Environment Variables](#-environm
 docker compose -f docker-compose.local.yml up --build
 ```
 
-| Service    | URL                        |
-|------------|----------------------------|
-| Frontend   | http://localhost:5173      |
-| Backend    | http://localhost:8080      |
-| PostgreSQL | localhost:5433             |
+| Service    | URL                   |
+|------------|-----------------------|
+| Frontend   | http://localhost:5173 |
+| Backend    | http://localhost:8080 |
+| PostgreSQL | localhost:5433        |
 
 ---
 
@@ -130,15 +130,15 @@ echo-messaging/
 Automated via GitHub Actions (`deploy.yml`). Pushes to `main` trigger build and deploy.
 
 ```
-┌──────────────┐     ┌───────────────────┐     ┌──────────────────────────┐
-│  Push to     │────▶│  Build & Push      │────▶│  Deploy to Production    │
-│  main        │     │  Docker Images     │     │  EC2 (Amazon Linux)      │
-└──────────────┘     └───────────────────┘     └──────────────────────────┘
+┌──────────────┐     ┌───────────────────┐     ┌────────────────────────┐
+│  Push to     │────▶│  Build & Push     │────▶│  Deploy to Production  │
+│  main        │     │  Docker Images    │     │  EC2 (Amazon Linux)    │
+└──────────────┘     └───────────────────┘     └────────────────────────┘
 ```
 
-| Branch | Environment | EC2 OS            | Backend Port | Frontend Port | URL                                  |
-|--------|-------------|-------------------|:------------:|:-------------:|:-------------------------------------|
-| `main` | Production  | Amazon Linux 2023 | 8080         | 5173          | https://echomessaging.duckdns.org    |
+| Branch | Environment | EC2 OS            | Backend Port | Frontend Port | URL                               |
+|--------|-------------|-------------------|:------------:|:-------------:|:----------------------------------|
+| `main` | Production  | Amazon Linux 2023 |     8080     |     5173      | https://echomessaging.duckdns.org |
 
 **Flow:**
 
@@ -152,26 +152,26 @@ Automated via GitHub Actions (`deploy.yml`). Pushes to `main` trigger build and 
 
 ### REST
 
-| Method | Endpoint                    | Auth     | Description                     |
-|--------|-----------------------------|----------|---------------------------------|
-| POST   | `/api/auth/register`        | No       | Register a new user             |
-| POST   | `/api/auth/login`           | No       | Login (returns JWT)             |
-| POST   | `/api/auth/logout`          | Yes      | Logout current user             |
-| GET    | `/api/auth/getcurrentuser`  | Yes      | Get authenticated user details  |
-| GET    | `/api/auth/getonlineusers`  | Yes      | List online users               |
-| GET    | `/api/messages/public`      | Yes      | Fetch public chat history       |
-| GET    | `/api/messages/private`     | Yes      | Fetch private message history   |
+| Method | Endpoint                   | Auth | Description                    |
+|--------|----------------------------|------|--------------------------------|
+| POST   | `/api/auth/register`       | No   | Register a new user            |
+| POST   | `/api/auth/login`          | No   | Login (returns JWT)            |
+| POST   | `/api/auth/logout`         | Yes  | Logout current user            |
+| GET    | `/api/auth/getcurrentuser` | Yes  | Get authenticated user details |
+| GET    | `/api/auth/getonlineusers` | Yes  | List online users              |
+| GET    | `/api/messages/public`     | Yes  | Fetch public chat history      |
+| GET    | `/api/messages/private`    | Yes  | Fetch private message history  |
 
 ### WebSocket (STOMP over SockJS)
 
-| Type        | Destination / Topic                  | Description                |
-|-------------|--------------------------------------|----------------------------|
-| Connect     | `/ws`                                | SockJS handshake endpoint  |
-| Subscribe   | `/topic/public`                      | Public messages stream     |
-| Subscribe   | `/user/{username}/queue/private`     | Private messages stream    |
-| Send        | `/app/chat.sendMessage`              | Send public message        |
-| Send        | `/app/chat.sendPrivateMessage`       | Send private message       |
-| Send        | `/app/chat.addUser`                  | Join chat (go online)      |
+| Type      | Destination / Topic              | Description               |
+|-----------|----------------------------------|---------------------------|
+| Connect   | `/ws`                            | SockJS handshake endpoint |
+| Subscribe | `/topic/public`                  | Public messages stream    |
+| Subscribe | `/user/{username}/queue/private` | Private messages stream   |
+| Send      | `/app/chat.sendMessage`          | Send public message       |
+| Send      | `/app/chat.sendPrivateMessage`   | Send private message      |
+| Send      | `/app/chat.addUser`              | Join chat (go online)     |
 
 > Full API documentation: [`echo-backend/API_DOCS.md`](echo-backend/API_DOCS.md)
 
@@ -180,4 +180,3 @@ Automated via GitHub Actions (`deploy.yml`). Pushes to `main` trigger build and 
 ## 📄 License
 
 This project is unlicensed — all rights reserved.
-

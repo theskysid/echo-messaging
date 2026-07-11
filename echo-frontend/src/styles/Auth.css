@@ -295,6 +295,38 @@
     animation: authSlideUp 0.3s var(--ease-out-expo);
 }
 
+/* ── Sandbox Notice ────────────────────────── */
+.sandbox-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.22);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 0.95rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.82rem;
+    color: #fcd34d;
+    line-height: 1.45;
+    animation: authSlideUp 0.35s var(--ease-out-expo);
+}
+
+.sandbox-notice-icon {
+    font-size: 1.05rem;
+    flex-shrink: 0;
+    margin-top: 0.04rem;
+}
+
+.sandbox-notice p {
+    margin: 0;
+    color: #fef3c7;
+}
+
+.sandbox-notice strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
 /* ── Divider ───────────────────────────────── */
 .auth-divider {
     display: flex;

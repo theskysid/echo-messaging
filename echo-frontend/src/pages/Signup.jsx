@@ -96,6 +96,13 @@ const Signup = () => {
           <p>Create an account to start chatting</p>
         </div>
 
+        <div className="sandbox-notice">
+          <span className="sandbox-notice-icon">ℹ️</span>
+          <p>
+            <strong>Note on Phone OTP:</strong> Mobile SMS is sandboxed in Twilio (only registered numbers can receive messages without credits). We recommend using <strong>Email OTP</strong>, Google, or Password sign up instead.
+          </p>
+        </div>
+
         <form
           onSubmit={otpSent ? handleVerifySignup : handleSendOtp}
           className="signup-form"

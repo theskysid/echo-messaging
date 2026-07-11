@@ -78,6 +78,9 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
 }
 
 /* ── Menu ──────────────────────────────────── */

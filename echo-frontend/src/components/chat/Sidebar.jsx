@@ -80,6 +80,31 @@ const Sidebar = ({ chat, friends, ui, layout }) => {
             </div>
 
             <div className="users-list">
+                {/* Pinned Global Chat at top of sidebar */}
+                <div
+                    className={`friend-sidebar-item ${showGlobalChat ? 'menu-active' : ''}`}
+                    style={{ borderBottom: '1px solid var(--border-glass)', marginBottom: '0.5rem', paddingBottom: '0.6rem' }}
+                    onClick={() => {
+                        setShowGlobalChat(true);
+                        if (openChats.length >= 3) {
+                            setOpenChats(prev => prev.slice(prev.length - 2));
+                        }
+                    }}
+                >
+                    <div className="friend-sidebar-user">
+                        <div className="user-avatar friend-avatar" style={{ background: 'var(--gradient-primary)', color: '#fff' }}>
+                            🌐
+                        </div>
+                        <div className="friend-sidebar-meta">
+                            <span className="friend-sidebar-name">Global Chat</span>
+                            <span className="friend-sidebar-status online">● {chat?.onlineUsers?.size || 1} online</span>
+                        </div>
+                    </div>
+                    <div className="friend-sidebar-actions">
+                        <span className="friend-dm-icon" title="Pinned Global Chat" style={{ fontSize: '1rem' }}>📌</span>
+                    </div>
+                </div>
+
                 {sidebarTab === 'friends' ? (
                     <>
                         <button
