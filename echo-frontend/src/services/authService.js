@@ -40,9 +40,12 @@ api.interceptors.response.use(
         if (error.response) {
             switch (error.response.status) {
                 case 401: // Unauthorized
-                    // Redirect to login or logout
-                    authService.logout();
-                    window.location.href = '/login';
+                    // Skip auto-redirect for session validation calls —
+                    // SessionGuard handles that flow explicitly.
+                    if (error.config?.url !== '/auth/getcurrentuser') {
+                        authService.logout();
+                        window.location.href = '/login';
+                    }
                     break;
                 case 403: // Forbidden
                     console.error('Access forbidden');
@@ -159,6 +162,8 @@ export const authService = {
                 await authService.logout();
             }
 
+            // Re-throw so callers (e.g. SessionGuard) can detect failure
+            throw error;
         }
     },
 
