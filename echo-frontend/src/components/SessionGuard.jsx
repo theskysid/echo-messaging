@@ -9,18 +9,27 @@ const SessionGuard = ({ children }) => {
         let cancelled = false;
 
         const initSession = async () => {
-            // No existing JWT — nothing to validate, render immediately
+            // Users without saved login / JWT get instant access to the site (no loader)
             if (!authService.isAuthenticated()) {
                 setIsReady(true);
                 return;
             }
 
+            const startTime = Date.now();
+            const MIN_LOADING_TIME = 2800; // ~3 seconds loader duration for session & chat restoration
+
             try {
-                // Validate the stored JWT against the backend and refresh localStorage
+                // Validate stored JWT against backend and refresh user state
                 await authService.fetchCurrentUser();
-                if (!cancelled) {
-                    setIsReady(true);
-                }
+
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsedTime);
+
+                setTimeout(() => {
+                    if (!cancelled) {
+                        setIsReady(true);
+                    }
+                }, remainingTime);
             } catch (error) {
                 // Token is invalid / expired — clean up and send to login
                 console.warn('Session validation failed, redirecting to login:', error);
