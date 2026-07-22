@@ -151,8 +151,27 @@ export const authService = {
         try{
             const response = await api.get('/auth/getcurrentuser');
 
-            localStorage.setItem('user', JSON.stringify(response.data));
-            return response.data;
+            // Preserve the existing JWT token — the /auth/getcurrentuser
+            // endpoint returns user data WITHOUT a token field.
+            const existingUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const existingCurrentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const existingToken = existingCurrentUser.token || existingUser.token;
+
+            const updatedUser = { ...response.data };
+            if (existingToken && !updatedUser.token) {
+                updatedUser.token = existingToken;
+            }
+
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+
+            // Keep 'currentUser' in sync with fresh data while preserving color/loginTime/token
+            const updatedCurrentUser = {
+                ...existingCurrentUser,
+                ...updatedUser,
+            };
+            localStorage.setItem('currentUser', JSON.stringify(updatedCurrentUser));
+
+            return updatedUser;
         }
         catch (error){
             console.error('Error fetching user data', error);
